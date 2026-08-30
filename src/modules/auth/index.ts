@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { db } from "../../../prisma/db";
 import { login, register } from "./service";
 
 export default async function authModule(app: FastifyInstance) {
@@ -85,7 +86,7 @@ export default async function authModule(app: FastifyInstance) {
   );
 
   app.get("/me", { onRequest: [app.authenticate] }, async (request, reply) => {
-    const user = await app.db.orm.public.User
+    const user = await db.orm.public.User
       .where({ id: request.user.id })
       .select("id", "name", "email", "role", "restaurantId")
       .first();
