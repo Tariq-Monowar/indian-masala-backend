@@ -1,0 +1,36 @@
+// use prisma-next
+
+model Restaurant {
+  id        Uuid     @id @default(uuid())
+  name      String
+  slug      String   @unique
+  phone     String?
+  address   String?
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+  users     User[]
+  staff     Staff[]
+}
+
+model User {
+  id           Uuid     @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         String   @default("owner")
+  restaurantId Uuid
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    TimestamptzString @default(now())
+  updatedAt    temporal.updatedAtString()
+}
+
+model Staff {
+  id           Uuid     @id @default(uuid())
+  name         String
+  phone        String?
+  role         String
+  restaurantId Uuid
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    TimestamptzString @default(now())
+  updatedAt    temporal.updatedAtString()
+}
