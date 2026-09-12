@@ -63,7 +63,14 @@ query: {
   - cursor={{id}}
   - limit={{limit}}
   - search={{search}}
-  - category={{category}}
+  - category={{category,category}}
+  - spicy_level={{level,level}}
+  - price={{1,20}}
+  - min_price={{1}}
+  - max_price={{20}}
+  - preparation_time={{1,20}}
+  - sort={{asc|desc}}
+  - sort_by={{createdAt|price|min_price|max_price|preparation_time}}
 }
 
 body: {
@@ -71,10 +78,16 @@ body: {
 
 note:
   - cursor is the last menu id from the previous page
-  - limit defaults to 20
+  - limit defaults to 20 and max is 50
   - do not send cursor on the first page
-  - search matches food_name
-  - category matches category_name
+  - search matches food_name, category_name, description_en, description_fr
+  - category accepts names or ids, spaces are ok
+  - spicy_level is case-insensitive
+  - price=1,20 or max_price=1,20 is a dollar range
+  - category=Mains&price=1,20 returns that category priced 1 to 20
+  - preparation_time is a from,to minute range
+  - sort defaults to desc
+  - sort_by defaults to createdAt
 
 Response: {
   {
@@ -231,7 +244,7 @@ Response: {
 =================================
 delete image bulk
 ______________DELETE
-{{_baseUrl}}/api/menu/image/bulk
+{{_baseUrl}}/api/menu/image
 
 query: {
 }

@@ -68,10 +68,10 @@ export default async function menuRoutes(fastify: FastifyInstance) {
 
   /*
    * delete image bulk
-   * {{_baseUrl}}/api/menu/image/bulk
+   * {{_baseUrl}}/api/menu/image
   */
   fastify.delete(
-    "/image/bulk",
+    "/image",
     {
       preHandler: [verifyUser("admin")],
     },
