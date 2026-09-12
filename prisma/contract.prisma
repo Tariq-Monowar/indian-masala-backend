@@ -72,3 +72,32 @@ model menu_image {
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }
+
+
+
+
+//reservation
+model reservation {
+  id        String    @id @default(uuid())
+
+  number_of_guests Int?
+  date DateString?
+  time TimeString?
+
+  name String?
+  phone String?
+  email String?
+  description String?
+  status ReservationStatus?
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+enum ReservationStatus {
+  @@type("pg/text@1")
+
+  pending = "pending"
+  confirmed = "confirmed"
+  cancelled = "cancelled"
+  completed = "completed"
+}

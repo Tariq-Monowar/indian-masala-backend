@@ -16,6 +16,10 @@
       "model": "menu_image",
       "namespace": "public"
     },
+    "reservation": {
+      "model": "reservation",
+      "namespace": "public"
+    },
     "users": {
       "model": "users",
       "namespace": "public"
@@ -25,6 +29,27 @@
     "namespaces": {
       "public": {
         "enum": {
+          "ReservationStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "pending",
+                "value": "pending"
+              },
+              {
+                "name": "confirmed",
+                "value": "confirmed"
+              },
+              {
+                "name": "cancelled",
+                "value": "cancelled"
+              },
+              {
+                "name": "completed",
+                "value": "completed"
+              }
+            ]
+          },
           "SpicyLevel": {
             "codecId": "pg/text@1",
             "members": [
@@ -373,6 +398,133 @@
               "table": "menu_image"
             }
           },
+          "reservation": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "date": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "email": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "number_of_guests": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "phone": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ReservationStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "time": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/time-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "date": {
+                  "column": "date"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "number_of_guests": {
+                  "column": "number_of_guests"
+                },
+                "phone": {
+                  "column": "phone"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "time": {
+                  "column": "time"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "reservation"
+            }
+          },
           "users": {
             "fields": {
               "createdAt": {
@@ -709,6 +861,90 @@
               },
               "uniques": []
             },
+            "reservation": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('pending', 'confirmed', 'cancelled', 'completed')",
+                  "name": "reservation_status_check_915bfb71",
+                  "prefix": "reservation_status_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "date": {
+                  "codecId": "pg/date-string@1",
+                  "nativeType": "date",
+                  "nullable": true
+                },
+                "description": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "number_of_guests": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": true
+                },
+                "phone": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ReservationStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "time": {
+                  "codecId": "pg/time-string@1",
+                  "nativeType": "time",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "users": {
               "checks": [
                 {
@@ -790,6 +1026,15 @@
             }
           },
           "valueSet": {
+            "ReservationStatus": {
+              "kind": "valueSet",
+              "values": [
+                "pending",
+                "confirmed",
+                "cancelled",
+                "completed"
+              ]
+            },
             "SpicyLevel": {
               "kind": "valueSet",
               "values": [
@@ -811,10 +1056,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "17d113d3cc51181d5c7db4c5f972cd4c4d394da669a7e6bd081d54df21636a42"
+    "storageHash": "89879a9c5e0907605136809a7c487e9c439fecba2e88c9f2402d4797c68b9d71"
   },
   "execution": {
-    "executionHash": "ab1c1fb830bf3c7a5895ed63a21b448f1bdd72293616db8966c9038e47f8e55d",
+    "executionHash": "84860293767326f6440bc874d3e3f66615b411d0f7461f5455947d6b075130d5",
     "mutations": {
       "defaults": [
         {
@@ -893,6 +1138,32 @@
             "column": "updatedAt",
             "namespace": "public",
             "table": "menu_image"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "reservation"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "reservation"
           }
         },
         {

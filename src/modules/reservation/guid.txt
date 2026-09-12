@@ -1,0 +1,173 @@
+=================================
+create reservation
+______________POST
+{{_baseUrl}}/api/reservation/create
+
+query: {
+}
+
+body: {
+  - number_of_guests: number
+  - date: string
+  - time: string
+  - name: string
+  - phone: string
+  - email: string
+  - description: string
+  - status: pending | confirmed | cancelled | completed
+}
+
+note:
+  - name, phone, date, time, number_of_guests are required
+  - email and description are optional
+  - date is YYYY-MM-DD
+  - time is HH:MM or HH:MM:SS
+  - status defaults to pending
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "number_of_guests": 4,
+      "date": "2026-09-20",
+      "time": "18:30:00",
+      "name": "Tariq Monowar",
+      "phone": "01712345678",
+      "email": "tariq@example.com",
+      "status": "pending",
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+get all reservation
+______________GET
+{{_baseUrl}}/api/reservation/get
+
+query: {
+  - cursor={{id}}
+  - limit={{limit}}
+  - search={{search}}
+  - status={{status,status}}
+}
+
+body: {
+}
+
+note:
+  - Authorization admin token
+  - cursor is the last reservation id from the previous page
+  - limit defaults to 20 and max is 50
+  - do not send cursor on the first page
+  - search matches name, phone, email, status, date, time, number_of_guests
+  - status is pending, confirmed, cancelled, completed
+  - status=pending,confirmed returns those statuses
+
+Response: {
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "uuid",
+        "number_of_guests": 4,
+        "date": "2026-09-20",
+        "time": "18:30:00",
+        "name": "Tariq Monowar",
+        "phone": "01712345678",
+        "email": "tariq@example.com",
+        "status": "pending",
+        "createdAt": "2026-09-12T10:00:00.000Z",
+        "updatedAt": "2026-09-12T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": false
+    }
+  }
+}
+
+=================================
+get single reservation
+______________GET
+{{_baseUrl}}/api/reservation/get/:id
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - Authorization admin token
+  - id is in the URL
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "number_of_guests": 4,
+      "date": "2026-09-20",
+      "time": "18:30:00",
+      "name": "Tariq Monowar",
+      "phone": "01712345678",
+      "email": "tariq@example.com",
+      "description": "Window table",
+      "status": "pending",
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+update reservation status
+______________PATCH
+{{_baseUrl}}/api/reservation/update
+
+query: {
+}
+
+body: {
+  - ids: string[]
+  - status: pending | confirmed | cancelled | completed
+}
+
+note:
+  - Authorization admin token
+  - send one or more reservation ids
+  - status is required
+
+Response: {
+  {
+    "success": true,
+    "message": "Reservation status updated successfully"
+  }
+}
+
+=================================
+delete reservation bulk
+______________DELETE
+{{_baseUrl}}/api/reservation/bulk
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - Authorization admin token
+  - send one or more reservation ids
+  - deletes matching reservations
+
+Response: {
+  {
+    "success": true,
+    "message": "Reservations deleted successfully"
+  }
+}
