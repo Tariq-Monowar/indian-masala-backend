@@ -101,3 +101,43 @@ enum ReservationStatus {
   cancelled = "cancelled"
   completed = "completed"
 }
+
+model catering {
+  id        String    @id @default(uuid())
+  
+  name String?
+  phone String?
+  email String?
+  event_type String?
+  number_of_guests Int?
+  date DateString?
+  location String?
+  special_requirements String?
+  description String?
+
+  status CateringStatus?
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+enum CateringStatus {
+  @@type("pg/text@1")
+
+  pending = "pending"
+  confirmed = "confirmed"
+  cancelled = "cancelled"
+  completed = "completed"
+}
+
+model contect_us {
+  id        String    @id @default(uuid())
+
+  first_name String?
+  last_name String?
+  email String?
+  phone String?
+  message String?
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}

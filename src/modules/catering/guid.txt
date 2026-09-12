@@ -1,27 +1,28 @@
 =================================
-create reservation
+create catering
 ______________POST
-{{_baseUrl}}/api/reservation/create
+{{_baseUrl}}/api/catering/create
 
 query: {
 }
 
 body: {
-  - number_of_guests: number
-  - date: string
-  - time: string
   - name: string
   - phone: string
   - email: string
+  - event_type: string
+  - number_of_guests: number
+  - date: string
+  - location: string
+  - special_requirements: string
   - description: string
   - status: pending | confirmed | cancelled | completed
 }
 
 note:
-  - name, phone, date, time, number_of_guests are required
-  - email and description are optional
+  - name, phone, date, number_of_guests are required
+  - email, event_type, location, special_requirements, description are optional
   - date is YYYY-MM-DD
-  - time is HH:MM or HH:MM:SS
   - status defaults to pending
 
 Response: {
@@ -29,12 +30,13 @@ Response: {
     "success": true,
     "data": {
       "id": "uuid",
-      "number_of_guests": 4,
-      "date": "2026-09-20",
-      "time": "18:30:00",
       "name": "Tariq Monowar",
       "phone": "01712345678",
       "email": "tariq@example.com",
+      "event_type": "Wedding",
+      "number_of_guests": 80,
+      "date": "2026-10-15",
+      "location": "Dhaka",
       "status": "pending",
       "createdAt": "2026-09-12T10:00:00.000Z",
       "updatedAt": "2026-09-12T10:00:00.000Z"
@@ -43,9 +45,9 @@ Response: {
 }
 
 =================================
-get all reservation
+get all catering
 ______________GET
-{{_baseUrl}}/api/reservation/get
+{{_baseUrl}}/api/catering/get
 
 query: {
   - cursor={{id}}
@@ -61,14 +63,15 @@ body: {
 
 note:
   - Authorization admin token
-  - cursor is the last reservation id from the previous page
+  - cursor is the last catering id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
-  - search matches name, phone, email, status, date, time, number_of_guests
+  - search matches name, phone, email, event_type, location, status, date, number_of_guests
   - status is pending, confirmed, cancelled, completed
   - status=pending,confirmed returns those statuses
   - started_date and end_date filter createdAt
   - end_date includes that full day
+  - description and special_requirements are not returned
 
 Response: {
   {
@@ -76,12 +79,13 @@ Response: {
     "data": [
       {
         "id": "uuid",
-        "number_of_guests": 4,
-        "date": "2026-09-20",
-        "time": "18:30:00",
         "name": "Tariq Monowar",
         "phone": "01712345678",
         "email": "tariq@example.com",
+        "event_type": "Wedding",
+        "number_of_guests": 80,
+        "date": "2026-10-15",
+        "location": "Dhaka",
         "status": "pending",
         "createdAt": "2026-09-12T10:00:00.000Z",
         "updatedAt": "2026-09-12T10:00:00.000Z"
@@ -94,9 +98,9 @@ Response: {
 }
 
 =================================
-get single reservation
+get single catering
 ______________GET
-{{_baseUrl}}/api/reservation/get/:id
+{{_baseUrl}}/api/catering/get/:id
 
 query: {
 }
@@ -113,13 +117,15 @@ Response: {
     "success": true,
     "data": {
       "id": "uuid",
-      "number_of_guests": 4,
-      "date": "2026-09-20",
-      "time": "18:30:00",
       "name": "Tariq Monowar",
       "phone": "01712345678",
       "email": "tariq@example.com",
-      "description": "Window table",
+      "event_type": "Wedding",
+      "number_of_guests": 80,
+      "date": "2026-10-15",
+      "location": "Dhaka",
+      "special_requirements": "Halal only",
+      "description": "Evening buffet",
       "status": "pending",
       "createdAt": "2026-09-12T10:00:00.000Z",
       "updatedAt": "2026-09-12T10:00:00.000Z"
@@ -128,9 +134,9 @@ Response: {
 }
 
 =================================
-update reservation status
+update catering status
 ______________PATCH
-{{_baseUrl}}/api/reservation/update
+{{_baseUrl}}/api/catering/update
 
 query: {
 }
@@ -142,20 +148,20 @@ body: {
 
 note:
   - Authorization admin token
-  - send one or more reservation ids
+  - send one or more catering ids
   - status is required
 
 Response: {
   {
     "success": true,
-    "message": "Reservation status updated successfully"
+    "message": "Catering status updated successfully"
   }
 }
 
 =================================
-delete reservation bulk
+delete catering bulk
 ______________DELETE
-{{_baseUrl}}/api/reservation/bulk
+{{_baseUrl}}/api/catering/bulk
 
 query: {
 }
@@ -166,12 +172,12 @@ body: {
 
 note:
   - Authorization admin token
-  - send one or more reservation ids
-  - deletes matching reservations
+  - send one or more catering ids
+  - deletes matching caterings
 
 Response: {
   {
     "success": true,
-    "message": "Reservations deleted successfully"
+    "message": "Caterings deleted successfully"
   }
 }

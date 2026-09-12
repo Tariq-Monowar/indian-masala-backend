@@ -1,14 +1,16 @@
 import { db, prisma } from "../../../prisma/db";
 
-export const createReservation = async (request, reply) => {
+export const createCatering = async (request, reply) => {
   try {
     const {
-      number_of_guests,
-      date,
-      time,
       name,
       phone,
       email,
+      event_type,
+      number_of_guests,
+      date,
+      location,
+      special_requirements,
       description,
       status,
     } = request.body;
@@ -34,13 +36,6 @@ export const createReservation = async (request, reply) => {
       });
     }
 
-    if (!time) {
-      return reply.status(400).send({
-        success: false,
-        message: "time is required!",
-      });
-    }
-
     if (!number_of_guests) {
       return reply.status(400).send({
         success: false,
@@ -61,13 +56,15 @@ export const createReservation = async (request, reply) => {
       });
     }
 
-    const reservation = await db.reservation.create({
-      number_of_guests: Number(number_of_guests),
-      date,
-      time,
+    const catering = await db.catering.create({
       name,
       phone,
       email,
+      event_type,
+      number_of_guests: Number(number_of_guests),
+      date,
+      location,
+      special_requirements,
       description,
       status: status || "pending",
     });
@@ -75,16 +72,17 @@ export const createReservation = async (request, reply) => {
     return reply.status(201).send({
       success: true,
       data: {
-        id: reservation.id,
-        number_of_guests: reservation.number_of_guests,
-        date: reservation.date,
-        time: reservation.time,
-        name: reservation.name,
-        phone: reservation.phone,
-        email: reservation.email,
-        status: reservation.status,
-        createdAt: reservation.createdAt,
-        updatedAt: reservation.updatedAt,
+        id: catering.id,
+        name: catering.name,
+        phone: catering.phone,
+        email: catering.email,
+        event_type: catering.event_type,
+        number_of_guests: catering.number_of_guests,
+        date: catering.date,
+        location: catering.location,
+        status: catering.status,
+        createdAt: catering.createdAt,
+        updatedAt: catering.updatedAt,
       },
     });
   } catch (error) {
@@ -96,7 +94,7 @@ export const createReservation = async (request, reply) => {
   }
 };
 
-export const getAllReservation = async (request, reply) => {
+export const getAllCatering = async (request, reply) => {
   try {
     const { cursor, limit, search, status, started_date, end_date } =
       request.query;
@@ -114,54 +112,57 @@ export const getAllReservation = async (request, reply) => {
 
     const plan = prisma.raw.sql`
       SELECT
-        r.id,
-        r.number_of_guests,
-        r.date,
-        r.time,
-        r.name,
-        r.phone,
-        r.email,
-        r.status,
-        r."createdAt",
-        r."updatedAt"
-      FROM reservation r
+        c.id,
+        c.name,
+        c.phone,
+        c.email,
+        c.event_type,
+        c.number_of_guests,
+        c.date,
+        c.location,
+        c.status,
+        c."createdAt",
+        c."updatedAt"
+      FROM catering c
       WHERE
         (
           ${searchPattern} = ''
           OR (
-            COALESCE(r.name, '') || ' ' ||
-            COALESCE(r.phone, '') || ' ' ||
-            COALESCE(r.email, '') || ' ' ||
-            COALESCE(r.status, '') || ' ' ||
-            COALESCE(r.date::text, '') || ' ' ||
-            COALESCE(r.time::text, '') || ' ' ||
-            COALESCE(r.number_of_guests::text, '')
+            COALESCE(c.name, '') || ' ' ||
+            COALESCE(c.phone, '') || ' ' ||
+            COALESCE(c.email, '') || ' ' ||
+            COALESCE(c.event_type, '') || ' ' ||
+            COALESCE(c.location, '') || ' ' ||
+            COALESCE(c.status, '') || ' ' ||
+            COALESCE(c.date::text, '') || ' ' ||
+            COALESCE(c.number_of_guests::text, '')
           ) ILIKE ${searchPattern}
         )
         AND (
           ${statusCsv} = ''
-          OR r.status = ANY(string_to_array(${statusCsv}, ','))
+          OR c.status = ANY(string_to_array(${statusCsv}, ','))
         )
-        AND (${useStart} = 0 OR r."createdAt" >= ${startDate}::date)
-        AND (${useEnd} = 0 OR r."createdAt" < (${endDate}::date + interval '1 day'))
+        AND (${useStart} = 0 OR c."createdAt" >= ${startDate}::date)
+        AND (${useEnd} = 0 OR c."createdAt" < (${endDate}::date + interval '1 day'))
         AND (
           ${cursorId} = ''
-          OR NOT EXISTS (SELECT 1 FROM reservation c WHERE c.id = ${cursorId})
-          OR (r."createdAt", r.id) < (
-            SELECT c."createdAt", c.id FROM reservation c WHERE c.id = ${cursorId}
+          OR NOT EXISTS (SELECT 1 FROM catering x WHERE x.id = ${cursorId})
+          OR (c."createdAt", c.id) < (
+            SELECT x."createdAt", x.id FROM catering x WHERE x.id = ${cursorId}
           )
         )
-      ORDER BY r."createdAt" DESC, r.id DESC
+      ORDER BY c."createdAt" DESC, c.id DESC
       LIMIT ${take + 1}
     `
       .returnsRow({
         id: "pg/text@1",
-        number_of_guests: { codecId: "pg/int4@1", nullable: true },
-        date: { codecId: "pg/date-string@1", nullable: true },
-        time: { codecId: "pg/time-string@1", nullable: true },
         name: { codecId: "pg/text@1", nullable: true },
         phone: { codecId: "pg/text@1", nullable: true },
         email: { codecId: "pg/text@1", nullable: true },
+        event_type: { codecId: "pg/text@1", nullable: true },
+        number_of_guests: { codecId: "pg/int4@1", nullable: true },
+        date: { codecId: "pg/date-string@1", nullable: true },
+        location: { codecId: "pg/text@1", nullable: true },
         status: { codecId: "pg/text@1", nullable: true },
         createdAt: "pg/timestamptz-string@1",
         updatedAt: "pg/timestamptz-string@1",
@@ -187,7 +188,7 @@ export const getAllReservation = async (request, reply) => {
   }
 };
 
-export const getSingleReservation = async (request, reply) => {
+export const getSingleCatering = async (request, reply) => {
   try {
     const { id } = request.params;
 
@@ -198,29 +199,31 @@ export const getSingleReservation = async (request, reply) => {
       });
     }
 
-    const reservation = await db.reservation.where({ id }).first();
+    const catering = await db.catering.where({ id }).first();
 
-    if (!reservation) {
+    if (!catering) {
       return reply.status(404).send({
         success: false,
-        message: "Reservation not found!",
+        message: "Catering not found!",
       });
     }
 
     return reply.status(200).send({
       success: true,
       data: {
-        id: reservation.id,
-        number_of_guests: reservation.number_of_guests,
-        date: reservation.date,
-        time: reservation.time,
-        name: reservation.name,
-        phone: reservation.phone,
-        email: reservation.email,
-        description: reservation.description,
-        status: reservation.status,
-        createdAt: reservation.createdAt,
-        updatedAt: reservation.updatedAt,
+        id: catering.id,
+        name: catering.name,
+        phone: catering.phone,
+        email: catering.email,
+        event_type: catering.event_type,
+        number_of_guests: catering.number_of_guests,
+        date: catering.date,
+        location: catering.location,
+        special_requirements: catering.special_requirements,
+        description: catering.description,
+        status: catering.status,
+        createdAt: catering.createdAt,
+        updatedAt: catering.updatedAt,
       },
     });
   } catch (error) {
@@ -232,7 +235,7 @@ export const getSingleReservation = async (request, reply) => {
   }
 };
 
-export const updateReservationStatus = async (request, reply) => {
+export const updateCateringStatus = async (request, reply) => {
   try {
     const { ids, status } = request.body;
 
@@ -263,14 +266,14 @@ export const updateReservationStatus = async (request, reply) => {
     }
 
     for (const id of ids) {
-      const existing = await db.reservation.where({ id }).first();
+      const existing = await db.catering.where({ id }).first();
       if (!existing) continue;
-      await db.reservation.where({ id }).update({ status });
+      await db.catering.where({ id }).update({ status });
     }
 
     return reply.status(200).send({
       success: true,
-      message: "Reservation status updated successfully",
+      message: "Catering status updated successfully",
     });
   } catch (error) {
     request.log.error(error);
@@ -281,7 +284,7 @@ export const updateReservationStatus = async (request, reply) => {
   }
 };
 
-export const deleteReservationBulk = async (request, reply) => {
+export const deleteCateringBulk = async (request, reply) => {
   try {
     const { ids } = request.body;
 
@@ -293,12 +296,12 @@ export const deleteReservationBulk = async (request, reply) => {
     }
 
     for (const id of ids) {
-      await db.reservation.where({ id }).delete();
+      await db.catering.where({ id }).delete();
     }
 
     return reply.status(200).send({
       success: true,
-      message: "Reservations deleted successfully",
+      message: "Caterings deleted successfully",
     });
   } catch (error) {
     request.log.error(error);

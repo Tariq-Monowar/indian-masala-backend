@@ -1,0 +1,102 @@
+=================================
+create contect_us
+______________POST
+{{_baseUrl}}/api/contect_us/create
+
+query: {
+}
+
+body: {
+  - first_name: string
+  - last_name: string
+  - email: string
+  - phone: string
+  - message: string
+}
+
+note:
+  - first_name, email, message are required
+  - last_name and phone are optional
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "first_name": "Tariq",
+      "last_name": "Monowar",
+      "email": "tariq@example.com",
+      "phone": "01712345678",
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+get all contect_us
+______________GET
+{{_baseUrl}}/api/contect_us/get
+
+query: {
+  - cursor={{id}}
+  - limit={{limit}}
+  - started_date={{YYYY-MM-DD}}
+  - end_date={{YYYY-MM-DD}}
+}
+
+body: {
+}
+
+note:
+  - Authorization admin token
+  - cursor is the last contect_us id from the previous page
+  - limit defaults to 20 and max is 50
+  - do not send cursor on the first page
+  - started_date and end_date filter createdAt
+  - end_date includes that full day
+
+Response: {
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "uuid",
+        "first_name": "Tariq",
+        "last_name": "Monowar",
+        "email": "tariq@example.com",
+        "phone": "01712345678",
+        "message": "I want to book a table",
+        "createdAt": "2026-09-12T10:00:00.000Z",
+        "updatedAt": "2026-09-12T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": false
+    }
+  }
+}
+
+=================================
+delete contect_us bulk
+______________DELETE
+{{_baseUrl}}/api/contect_us/bulk
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - Authorization admin token
+  - send one or more contect_us ids
+  - deletes matching rows
+
+Response: {
+  {
+    "success": true,
+    "message": "Contect us deleted successfully"
+  }
+}
