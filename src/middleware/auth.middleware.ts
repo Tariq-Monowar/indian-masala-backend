@@ -14,7 +14,9 @@ export const verifyUser = (...allowedRoles: string[]) => {
     }
 
     try {
-      const token = authHeader;
+      const token = authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : authHeader;
       request.user = jwt.verify(
         token,
         process.env.JWT_SECRET as string

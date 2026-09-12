@@ -1,0 +1,3 @@
+npx prisma contract emit
+npx prisma db update --dry-run
+npx prisma db update

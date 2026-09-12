@@ -25,6 +25,10 @@ When adding or changing an HTTP endpoint, **before saying done**:
     - `* short name` MUST match the guid short name **same to same**.
     - `* {{_baseUrl}}/api/...` MUST match the guid URL line under `______________METHOD` **same to same**. Example: guid `{{_baseUrl}}/api/users/create-admin` ↔ routes `* {{_baseUrl}}/api/users/create-admin`.
     - Do **not** ship a route without this comment. Do **not** let guid URL and comment URL drift.
+2c. **Named paths only (EXTREME — NEVER skip)** — never register `"/"` or a bare `"/:id"` / `"/:param"` as the path. Those clash when you add `/bulk`, `/get`, `/create`, `/update/:id`.
+    - **Forbidden:** `fastify.get("/")`, `fastify.patch("/:id")`, `fastify.delete("/:id")`, any path that is only `"/"` or starts with `"/:"`.
+    - **Required:** a named first segment. Examples: `/get`, `/create`, `/update/:id`, `/bulk`, `/create-admin`.
+    - Params are allowed **after** a name: `/update/:id` is OK. `/:id` is not.
 3. **Mount** — confirm the routes module is registered in `src/modules/index.ts`. `app.ts` registers that file once with `{ prefix: "/api" }`. **No** `/api/v1` or `/api/v2`. **No** AutoLoad on `src/modules` (that double-registers).
 4. **Guid** — document the full URL only after the route exists on disk. Follow **Guid format (EXTREME)** below. No other shape.
 5. **Never** ship controller-only or guid-only for a new endpoint while routes still lack the path.
@@ -76,6 +80,7 @@ Response: {
 
 - [ ] Handler exported from `*.controllers.ts`
 - [ ] Route registered in `*.routes.ts` with the EXTREME comment block (read file from disk)
+- [ ] Path is named (`/get`, `/create`, `/update/:id`) — never `"/"` or `"/:id"`
 - [ ] Route comment short name + `{{_baseUrl}}...` URL are same-to-same with `guid.txt`
 - [ ] `src/modules/index.ts` registers the module; `app.ts` mounts it at `/api`
 - [ ] `guid.txt` matches the real URL and response shape

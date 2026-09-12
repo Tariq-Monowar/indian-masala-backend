@@ -1,0 +1,253 @@
+=================================
+create menu
+______________POST
+{{_baseUrl}}/api/menu/create
+
+query: {
+}
+
+body: {
+  - food_name: string
+  - category_id: string
+  - min_price: number
+  - max_price: number
+  - preparation_time: number
+  - spicy_level: mild | medium | hot
+  - description_en: string
+  - description_fr: string
+  - images: file[]
+}
+
+note:
+  - Authorization admin token
+  - Content-Type is multipart/form-data
+  - upload.array("images", 10)
+  - all fields are optional
+  - category_id copies category name and icon onto the menu
+  - images are files, not JSON
+  - saved image is filename only
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "food_name": "Butter Chicken",
+      "category_id": "uuid",
+      "category_name": "Mains",
+      "icon": "mains.png",
+      "min_price": 12.5,
+      "max_price": 18,
+      "preparation_time": 25,
+      "spicy_level": "medium",
+      "description_en": "Creamy tomato chicken",
+      "description_fr": "Poulet crémeux à la tomate",
+      "images": [
+        {
+          "id": "uuid",
+          "image": "1710000000000-one.jpg"
+        }
+      ],
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+get all menu
+______________GET
+{{_baseUrl}}/api/menu/get
+
+query: {
+  - cursor={{id}}
+  - limit={{limit}}
+  - search={{search}}
+  - category={{category}}
+}
+
+body: {
+}
+
+note:
+  - cursor is the last menu id from the previous page
+  - limit defaults to 20
+  - do not send cursor on the first page
+  - search matches food_name
+  - category matches category_name
+
+Response: {
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "uuid",
+        "food_name": "Butter Chicken",
+        "category_id": "uuid",
+        "category_name": "Mains",
+        "icon": "mains.png",
+        "min_price": 12.5,
+        "max_price": 18,
+        "preparation_time": 25,
+        "spicy_level": "medium",
+        "description_en": "Creamy tomato chicken",
+        "description_fr": "Poulet crémeux à la tomate",
+        "createdAt": "2026-09-12T10:00:00.000Z",
+        "images": [
+          {
+            "id": "uuid",
+            "image": "1710000000000-one.jpg"
+          }
+        ]
+      }
+    ],
+    "pagination": {
+      "hasMore": false
+    }
+  }
+}
+
+=================================
+get single menu
+______________GET
+{{_baseUrl}}/api/menu/get/:id
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - id is in the URL
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "food_name": "Butter Chicken",
+      "category_id": "uuid",
+      "category_name": "Mains",
+      "icon": "mains.png",
+      "min_price": 12.5,
+      "max_price": 18,
+      "preparation_time": 25,
+      "spicy_level": "medium",
+      "description_en": "Creamy tomato chicken",
+      "description_fr": "Poulet crémeux à la tomate",
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z",
+      "images": [
+        {
+          "id": "uuid",
+          "image": "1710000000000-one.jpg"
+        }
+      ]
+    }
+  }
+}
+
+=================================
+update menu
+______________PATCH
+{{_baseUrl}}/api/menu/update/:id
+
+query: {
+}
+
+body: {
+  - food_name: string
+  - category_id: string
+  - min_price: number
+  - max_price: number
+  - preparation_time: number
+  - spicy_level: mild | medium | hot
+  - description_en: string
+  - description_fr: string
+  - images: file[]
+}
+
+note:
+  - Authorization admin token
+  - id is in the URL
+  - Content-Type is multipart/form-data
+  - upload.array("images", 10)
+  - all fields are optional
+  - new images are added, old images stay
+  - category_id copies category name and icon onto the menu
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "food_name": "Butter Chicken",
+      "category_id": "uuid",
+      "category_name": "Mains",
+      "icon": "mains.png",
+      "min_price": 12.5,
+      "max_price": 18,
+      "preparation_time": 25,
+      "spicy_level": "medium",
+      "description_en": "Creamy tomato chicken",
+      "description_fr": "Poulet crémeux à la tomate",
+      "images": [
+        {
+          "id": "uuid",
+          "image": "1710000000000-one.jpg"
+        }
+      ],
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+delete menu bulk
+______________DELETE
+{{_baseUrl}}/api/menu/bulk
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - Authorization admin token
+  - send one or more menu ids
+  - deletes matching menus and their images
+
+Response: {
+  {
+    "success": true,
+    "message": "Menus deleted successfully"
+  }
+}
+
+=================================
+delete image bulk
+______________DELETE
+{{_baseUrl}}/api/menu/image/bulk
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - Authorization admin token
+  - send one or more image ids
+  - deletes matching image rows and files
+
+Response: {
+  {
+    "success": true,
+    "message": "Images deleted successfully"
+  }
+}

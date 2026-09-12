@@ -1,0 +1,112 @@
+export const createRecipe = async (request, reply) => {
+  try {
+    const {
+      name,
+      minCookingTime,
+      maxCookingTime,
+      calories,
+      recipeType,
+      budget,
+      categories,
+      dietaryPreference,
+      description,
+      targetLifestyle,
+      price
+    } = request.body;
+
+    const requiredFields = [
+      "name",
+      "minCookingTime",
+      "maxCookingTime",
+      "calories",
+      "recipeType",
+      "budget",
+      "categories",
+      "dietaryPreference",
+      "description",
+      "targetLifestyle",
+      "price"
+    ];
+
+    const missingField = requiredFields.find((field) => !request.body[field]);
+    if (missingField) {
+      request.file?.path && FileService.removeFileByPath(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: `${missingField} is required!`,
+      });
+    }
+
+    if (!["High", "Medium", "Low"].includes(budget)) {
+      request.file?.path && FileService.removeFile(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: "Budget must be one of: High, Medium, Low",
+      });
+    }
+
+    if (!["senior", "student"].includes(targetLifestyle)) {
+      request.file?.path && FileService.removeFile(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: "Lifestyle must be: senior, student",
+      });
+    }
+
+    if (!request.file) {
+      return reply.status(400).send({
+        success: false,
+        message: "Recipe image is required!",
+      });
+    }
+
+    const prisma = request.server.prisma;
+
+    const minTime = parseInt(minCookingTime);
+    const maxTime = parseInt(maxCookingTime);
+    const cal = parseInt(calories);
+
+    if (isNaN(minTime) || isNaN(maxTime) || isNaN(cal)) {
+      request.file?.path && FileService.removeFile(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: "Cooking times and calories must be valid numbers.",
+      });
+    }
+
+    const newRecipe = await prisma.recipe.create({
+      data: {
+        name,
+        minCookingTime: minTime,
+        maxCookingTime: maxTime,
+        calories: cal,
+        recipeType,
+        budget,
+        categories,
+        dietaryPreference,
+        description,
+        targetLifestyle,
+        image: request.file.filename,
+        price: parseFloat(price),
+      },
+    });
+
+    return reply.status(201).send({
+      success: true,
+      message: "Recipe Created Successfully!",
+      data: {
+        ...newRecipe,
+        image: newRecipe.image ? getImageUrl(newRecipe.image) : null,
+      },
+    });
+  } catch (error) {
+    if (request.file?.path) FileService.removeFile(request.file.path);
+    request.log.error(error);
+
+    return reply.status(500).send({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message || error,
+    });
+  }
+};

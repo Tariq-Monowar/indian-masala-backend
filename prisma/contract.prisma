@@ -1,11 +1,5 @@
 // use prisma-next
 
-enum usersRole {
-  @@type("pg/text@1")
-  admin    = "admin"
-  customer = "customer"
-}
-
 model users {
   id        String    @id @default(uuid())
   name      String?
@@ -13,6 +7,68 @@ model users {
   phone     String?
   password  String?
   role      usersRole @default(customer)
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+enum usersRole {
+  @@type("pg/text@1")
+  admin    = "admin"
+  customer = "customer"
+}
+
+
+model category {
+  id        String    @id @default(uuid())
+  name      String?
+  icon      String?
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+model menu {
+  id        String    @id @default(uuid())
+
+  food_name String?
+
+  category_id String?
+  category category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  category_name String?
+  icon String?
+
+  min_price Float?
+  max_price Float?
+  preparation_time Int?
+  spicy_level SpicyLevel?
+
+  menu_image menu_image[]
+
+  description_en String?
+  description_fr String?
+
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+enum SpicyLevel {
+  @@type("pg/text@1")
+
+  mild   = "mild"
+  medium = "medium"
+  hot    = "hot"
+}
+
+model menu_image {
+  id        String    @id @default(uuid())
+
+  menu_id String?
+  menu menu @relation(fields: [menu_id], references: [id], onDelete: Cascade)
+
+  image String?
+
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }

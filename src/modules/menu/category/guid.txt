@@ -1,0 +1,119 @@
+=================================
+create category
+______________POST
+{{_baseUrl}}/api/menu/category/create
+
+query: {
+}
+
+body: {
+  - name: string
+  - icon: string
+}
+
+note:
+  - name is required
+  - icon is optional
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "name": "Starters",
+      "icon": "starter.png",
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+get all category
+______________GET
+{{_baseUrl}}/api/menu/category/get
+
+query: {
+  - cursor={{id}}
+  - limit={{limit}}
+  - search={{search}}
+}
+
+body: {
+}
+
+note:
+  - cursor is the last category id from the previous page
+  - limit defaults to 20
+  - do not send cursor on the first page
+  - search matches name
+
+Response: {
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "uuid",
+        "name": "Starters",
+        "icon": "starter.png",
+        "createdAt": "2026-09-12T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": false
+    }
+  }
+}
+
+=================================
+update category
+______________PATCH
+{{_baseUrl}}/api/menu/category/update/:id
+
+query: {
+}
+
+body: {
+  - name: string
+  - icon: string
+}
+
+note:
+  - id is in the URL
+  - name and icon are optional
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "name": "Starters",
+      "icon": "starter.png",
+      "createdAt": "2026-09-12T10:00:00.000Z",
+      "updatedAt": "2026-09-12T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+delete category bulk
+______________DELETE
+{{_baseUrl}}/api/menu/category/bulk
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - send one or more category ids
+  - deletes all matching rows
+
+Response: {
+  {
+    "success": true,
+    "message": "Categories deleted successfully"
+  }
+}

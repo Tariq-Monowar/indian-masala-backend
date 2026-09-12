@@ -46,6 +46,7 @@ export const createAdmin = async (request, reply) => {
       },
     });
   } catch (error) {
+    request.log.error(error);
     reply.status(500).send({
       success: false,
       message: "Internal server error",
@@ -86,12 +87,23 @@ export const adminLogin = async (request, reply) => {
       });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!);
+    const token = jwt.sign(
+      { userId: user.id, id: user.id, role: user.role },
+      process.env.JWT_SECRET!,
+    );
 
     return reply.status(200).send({
       success: true,
       token,
-      data: user,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
     });
   } catch (error) {
     reply.status(500).send({
