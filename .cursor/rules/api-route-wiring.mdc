@@ -1,0 +1,88 @@
+---
+description: Fastify API route wiring — controller, register, mount, guid
+alwaysApply: true
+---
+
+# API endpoint completeness (mandatory — NEVER skip)
+
+These rules are **extreme and non-negotiable**. This app is **Fastify**, not Express. No exceptions, no “quick fix”, no “same as before”, no partial compliance.
+
+When adding or changing an HTTP endpoint, **before saying done**:
+
+1. **Controller** — one exported handler per route. **No** shared helper functions. **No** module-level `select` / `include` / config objects reused across handlers. Logic stays **inside** that handler only.
+2. **Routes file on disk** — import the handler and register `fastify.get/post/put/patch/delete(...)` with the exact path. Verify with a shell read of the routes file (editor buffers do not count).
+2b. **Route comment (EXTREME — EVERY API, NEVER skip)** — every `fastify.get/post/put/patch/delete` MUST have this comment block immediately above it. No other comment shape.
+
+```
+  /*
+   * short name
+   * {{_baseUrl}}/api/module/path
+  */
+  fastify.post("/path", handler);
+```
+
+    - Inner lines are `   * text` (space before `*`). Closing is `  */`. Copy this spacing. No other comment shape.
+    - `* short name` MUST match the guid short name **same to same**.
+    - `* {{_baseUrl}}/api/...` MUST match the guid URL line under `______________METHOD` **same to same**. Example: guid `{{_baseUrl}}/api/users/create-admin` ↔ routes `* {{_baseUrl}}/api/users/create-admin`.
+    - Do **not** ship a route without this comment. Do **not** let guid URL and comment URL drift.
+3. **Mount** — confirm the routes module is registered in `src/modules/index.ts`. `app.ts` registers that file once with `{ prefix: "/api" }`. **No** `/api/v1` or `/api/v2`. **No** AutoLoad on `src/modules` (that double-registers).
+4. **Guid** — document the full URL only after the route exists on disk. Follow **Guid format (EXTREME)** below. No other shape.
+5. **Never** ship controller-only or guid-only for a new endpoint while routes still lack the path.
+6. **Pagination** — list GET APIs use cursor pagination. Response includes `pagination: { hasMore: true | false }` only (no total count unless explicitly requested).
+7. **Code quality** — clean, readable, understandable code. No sloppy shortcuts.
+8. **No helper functions** — one route, one controller handler. Do not extract helpers for selects, mappers, includes, or shared blocks.
+9. **database calling** — reduce DB round-trips. `prisma/db.ts` exports one `db` that is already `postgres(...).orm.public`. In handlers use `db.users.where(...)` / `db.users.create(...)`. Do **not** write `db.orm.public`. Do **not** export one const per model. Do **not** use Prisma 6 `prisma.users.findFirst` / `findUnique`.
+10. **Request params (EXTREME)** — only simple destructuring. Never `typeof x === "string" ? x.trim() : ""`. Never `request.body as { ... }`.
+    - `const { name, email, password } = request.body`
+    - `const { id } = request.params`
+    - `const { page } = request.query`
+11. **Auth** — put `verifyUser(...)` on the route in `*.routes.ts`. Do **not** add auth / 401 checks in the controller.
+12. **No Fastify / Express request types (EXTREME — NEVER skip)** — controllers must NOT import or annotate `FastifyRequest`, `FastifyReply`, Express `Request` / `Response`, or `any` on request/reply.
+    - **Forbidden:** `import { FastifyRequest, FastifyReply } from "fastify"`, `async (request: FastifyRequest, reply: FastifyReply)`, `request: any`, `reply: any`.
+    - **Required:** `export const handler = async (request, reply) => { ... }` — bare params only.
+    - **When touching any controller:** strip those imports and annotations in the same change.
+    - Routes files may type `fastify: FastifyInstance`. Controllers may not.
+13. **Guid format (EXTREME — NEVER skip)** — every `guid.txt` endpoint block MUST use this exact clean shape. No essays, no duplicated URL lists, no long prose at the top of the file.
+
+```
+=================================
+short name
+______________METHOD
+{{_baseUrl}}/api/module/path
+
+query: {
+  - id={{id}}
+}
+
+body: {
+  - field: type
+}
+
+note:
+  - short rules only
+
+Response: {
+    full response
+}
+```
+
+    - **One base URL line** under `______________METHOD` — do not repeat the same URL with different query strings as separate lines.
+    - **query / body** — list params only (`- name={{name}}` or `- name: type`). No paragraphs inside the braces.
+    - **note** — short bullets only.
+    - **Response** — one full JSON example per distinct outcome. Keep it real.
+    - **Forbidden in guid:** long intro walls, repeated URL spam, emojis, fluff, or documenting routes that are not registered on disk.
+
+## Delivery checklist (every endpoint — all required)
+
+- [ ] Handler exported from `*.controllers.ts`
+- [ ] Route registered in `*.routes.ts` with the EXTREME comment block (read file from disk)
+- [ ] Route comment short name + `{{_baseUrl}}...` URL are same-to-same with `guid.txt`
+- [ ] `src/modules/index.ts` registers the module; `app.ts` mounts it at `/api`
+- [ ] `guid.txt` matches the real URL and response shape
+- [ ] `guid.txt` uses the clean shape (METHOD / URL / query / body / note / Response)
+- [ ] GET list endpoints return `pagination: { hasMore }`
+- [ ] No module-level helpers / shared select objects
+- [ ] Simple `request.body` / `request.params` / `request.query` destructuring only
+- [ ] No `FastifyRequest` / `FastifyReply` / Express `Request` / `Response` / `any` on request/reply — use bare `(request, reply)` only
+
+A documented URL that returns `404 route not found` is a failed delivery. The frontend URL matching the guid is not enough if Fastify never registered the route.

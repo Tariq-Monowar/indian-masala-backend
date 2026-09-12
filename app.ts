@@ -4,7 +4,8 @@ import Fastify, { FastifyError } from "fastify";
 import AutoLoad from "@fastify/autoload";
 import cors from "@fastify/cors";
 import fastifyStatic from "@fastify/static";
-import { registerMultipart, uploadsDir } from "./src/config/storage.config";
+import { registerMultipart, uploads } from "./src/config/storage.config";
+import routes from "./src/modules";
 
 const app = Fastify({ logger: true });
 
@@ -31,13 +32,10 @@ app.register(AutoLoad, {
   dir: path.join(import.meta.dirname, "src/plugins"),
 });
 
-app.register(AutoLoad, {
-  dir: path.join(import.meta.dirname, "src/modules"),
-  options: { prefix: "/api" },
-});
+app.register(routes, { prefix: "/api" });
 
 app.register(fastifyStatic, {
-  root: uploadsDir,
+  root: uploads,
   prefix: "/uploads/",
 });
 

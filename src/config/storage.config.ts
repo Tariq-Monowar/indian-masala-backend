@@ -3,10 +3,10 @@ import fs from "fs";
 import multipart from "@fastify/multipart";
 import { FastifyInstance } from "fastify";
 
-export const uploadsDir = path.join(import.meta.dirname, "../../uploads");
+export const uploads = path.join(import.meta.dirname, "../../uploads");
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(uploads)) {
+  fs.mkdirSync(uploads, { recursive: true });
 }
 
 export function registerMultipart(app: FastifyInstance) {

@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "tsx index.ts",
     "prisma:emit": "prisma contract emit",
-    "postinstall": "prisma contract emit"
+    "postinstall": "prisma contract emit",
+    "push": "smart-git-push"
   },
   "keywords": [],
   "author": "",
@@ -21,16 +22,20 @@
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^10.1.3",
     "@prisma/orm-postgres": "^8.0.0-rc.8",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.4.2",
     "fastify": "^5.12.1",
     "fastify-plugin": "^5.1.0",
     "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "smart-git-push": "^1.1.5",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@prisma/cli-engine": "^0.2.3",
     "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.0",
     "prisma": "^8.0.0-rc.10",
     "tsx": "^4.20.5",

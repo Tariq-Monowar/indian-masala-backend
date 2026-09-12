@@ -1,0 +1,29 @@
+=================================
+create admin
+______________POST
+{{_baseUrl}}/api/users/create-admin
+
+query: {
+}
+
+body: {
+  - name: string
+  - email: string
+  - password: string
+}
+
+note:
+  - creates a user with role admin
+  - email must be unique
+
+Response: {
+  {
+    "success": true,
+    "user": {
+      "id": "uuid",
+      "name": "Tariq",
+      "email": "tariq@example.com",
+      "role": "admin"
+    }
+  }
+}
