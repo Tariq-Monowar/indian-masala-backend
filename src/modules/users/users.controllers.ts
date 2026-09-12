@@ -334,3 +334,57 @@ export const forgotPasswordRecentOtp = async (request, reply) => {
     });
   }
 };
+
+export const changePassword = async (request, reply) => {
+  try {
+    const { current_password, new_password } = request.body;
+
+    if (!current_password) {
+      return reply.status(400).send({
+        success: false,
+        message: "current_password is required!",
+      });
+    }
+
+    if (!new_password) {
+      return reply.status(400).send({
+        success: false,
+        message: "new_password is required!",
+      });
+    }
+
+    const { id } = request.user;
+    const user = await db.users.where({ id }).first();
+
+    if (!user || !user.password) {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(current_password, user.password);
+
+    if (!isMatch) {
+      return reply.status(400).send({
+        success: false,
+        message: "Current password is incorrect!",
+      });
+    }
+
+    await db.users.where({ id }).update({
+      password: await bcrypt.hash(new_password, 8),
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

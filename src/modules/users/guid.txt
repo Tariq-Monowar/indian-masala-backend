@@ -157,3 +157,28 @@ Response: {
     "otp": null
   }
 }
+
+=================================
+change password
+______________POST
+{{_baseUrl}}/api/users/change-password
+
+query: {
+}
+
+body: {
+  - current_password: string
+  - new_password: string
+}
+
+note:
+  - Authorization admin token
+  - current_password must match the logged in user
+  - new_password replaces the old password
+
+Response: {
+  {
+    "success": true,
+    "message": "Password changed successfully"
+  }
+}
