@@ -27,3 +27,133 @@ Response: {
     }
   }
 }
+
+=================================
+admin login
+______________POST
+{{_baseUrl}}/api/users/admin-login
+
+query: {
+}
+
+body: {
+  - email: string
+  - password: string
+}
+
+note:
+  - login with email and password
+  - token has no expiresIn
+
+Response: {
+  {
+    "success": true,
+    "token": "jwt",
+    "data": {
+      "id": "uuid",
+      "name": "Tariq",
+      "email": "tariq@example.com",
+      "phone": null,
+      "role": "admin",
+      "createdAt": "2026-09-12T09:00:00.000Z",
+      "updatedAt": "2026-09-12T09:00:00.000Z"
+    }
+  }
+}
+
+=================================
+forgotpassword sendotp
+______________POST
+{{_baseUrl}}/api/users/forgotpassword/sendotp
+
+query: {
+}
+
+body: {
+  - email: string
+}
+
+note:
+  - user must already exist
+  - OTP is stored in redis for 5 minutes
+  - otp is returned only when NODE_ENV is development
+
+Response: {
+  {
+    "success": true,
+    "message": "OTP sent to your email",
+    "otp": null
+  }
+}
+
+=================================
+forgotpassword verifyotp
+______________POST
+{{_baseUrl}}/api/users/forgotpassword/verifyotp
+
+query: {
+}
+
+body: {
+  - email: string
+  - otp: string
+}
+
+note:
+  - verify the OTP from sendotp
+  - after verify, reset is allowed for 10 minutes
+
+Response: {
+  {
+    "success": true,
+    "message": "OTP verified successfully"
+  }
+}
+
+=================================
+forgotpassword reset
+______________POST
+{{_baseUrl}}/api/users/forgotpassword/reset
+
+query: {
+}
+
+body: {
+  - email: string
+  - password: string
+}
+
+note:
+  - call after verifyotp
+  - permission_to_update_password must be true
+
+Response: {
+  {
+    "success": true,
+    "message": "Password reset successfully!"
+  }
+}
+
+=================================
+forgotpassword recentotp
+______________POST
+{{_baseUrl}}/api/users/forgotpassword/recentotp
+
+query: {
+}
+
+body: {
+  - email: string
+}
+
+note:
+  - resend OTP for an active forgot-password session
+  - session must still exist in redis
+
+Response: {
+  {
+    "success": true,
+    "message": "New OTP sent successfully",
+    "otp": null
+  }
+}

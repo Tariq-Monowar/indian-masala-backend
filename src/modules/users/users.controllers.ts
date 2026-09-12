@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { db } from "../../../prisma/db";
+import { forgotPasswordEmail } from "../../emails/auth.email";
 
 export const createAdmin = async (request, reply) => {
   try {
@@ -16,7 +18,6 @@ export const createAdmin = async (request, reply) => {
       });
     }
 
-
     const existingUser = await db.users.where({ email }).first();
 
     if (existingUser) {
@@ -27,7 +28,6 @@ export const createAdmin = async (request, reply) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 8);
-
 
     const user = await db.users.create({
       name,
@@ -44,6 +44,276 @@ export const createAdmin = async (request, reply) => {
         email: user.email,
         role: user.role,
       },
+    });
+  } catch (error) {
+    reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const adminLogin = async (request, reply) => {
+  try {
+    const { email, password } = request.body;
+
+    const missingField = ["email", "password"].find(
+      (field) => !request.body[field],
+    );
+
+    if (missingField) {
+      return reply.status(400).send({
+        success: false,
+        message: `${missingField} is required!`,
+      });
+    }
+
+    const user = await db.users.where({ email }).first();
+
+    if (!user || !user.password) {
+      return reply.status(401).send({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return reply.status(401).send({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!);
+
+    return reply.status(200).send({
+      success: true,
+      token,
+      data: user,
+    });
+  } catch (error) {
+    reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const forgotPasswordSendOtp = async (request, reply) => {
+  try {
+    const { email } = request.body;
+
+    if (!email) {
+      return reply.status(400).send({
+        success: false,
+        message: "email is required!",
+      });
+    }
+
+    const existingUser = await db.users.where({ email }).first();
+
+    if (!existingUser) {
+      return reply.status(404).send({
+        success: false,
+        message: "User with this email does not exist",
+      });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpExpiry = Date.now() + 5 * 60 * 1000;
+    const redis = request.server.redis;
+
+    await forgotPasswordEmail(email, otp);
+
+    await redis
+      .multi()
+      .hset(`forgot-password-otp:${email}`, {
+        email,
+        otp,
+        expiration: otpExpiry.toString(),
+        userId: existingUser.id.toString(),
+        permission_to_update_password: "false",
+      })
+      .expire(`forgot-password-otp:${email}`, 5 * 60)
+      .exec();
+
+    return reply.status(200).send({
+      success: true,
+      message: "OTP sent to your email",
+      otp: process.env.NODE_ENV === "development" ? otp : null,
+    });
+  } catch (error) {
+    reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const forgotPasswordVerifyOtp = async (request, reply) => {
+  try {
+    const { email, otp } = request.body;
+
+    const missingField = ["email", "otp"].find((field) => !request.body[field]);
+
+    if (missingField) {
+      return reply.status(400).send({
+        success: false,
+        message: `${missingField} is required!`,
+      });
+    }
+
+    const redis = request.server.redis;
+    const otpData = await redis.hgetall(`forgot-password-otp:${email}`);
+
+    if (!Object.keys(otpData || {}).length) {
+      return reply.status(400).send({
+        success: false,
+        message: "OTP not found or expired!",
+      });
+    }
+
+    if (otpData.otp !== otp) {
+      return reply.status(400).send({
+        success: false,
+        message: "Invalid OTP!",
+      });
+    }
+
+    if (Date.now() > parseInt(otpData.expiration)) {
+      return reply.status(400).send({
+        success: false,
+        message: "OTP expired!",
+      });
+    }
+
+    await redis.hset(`forgot-password-otp:${email}`, {
+      permission_to_update_password: "true",
+    });
+    await redis.expire(`forgot-password-otp:${email}`, 10 * 60);
+
+    return reply.status(200).send({
+      success: true,
+      message: "OTP verified successfully",
+    });
+  } catch (error) {
+    reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const forgotPasswordReset = async (request, reply) => {
+  try {
+    const { email, password } = request.body;
+
+    const missingField = ["email", "password"].find(
+      (field) => !request.body[field],
+    );
+
+    if (missingField) {
+      return reply.status(400).send({
+        success: false,
+        message: `${missingField} is required!`,
+      });
+    }
+
+    const redis = request.server.redis;
+    const otpData = await redis.hgetall(`forgot-password-otp:${email}`);
+
+    if (!Object.keys(otpData || {}).length) {
+      return reply.status(400).send({
+        success: false,
+        message: "Password reset session expired!",
+      });
+    }
+
+    if (otpData.permission_to_update_password !== "true") {
+      return reply.status(400).send({
+        success: false,
+        message: "Permission to update password not granted!",
+      });
+    }
+
+    const user = await db.users.where({ email }).first();
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    await db.users.where({ email }).update({
+      password: await bcrypt.hash(password, 8),
+    });
+
+    await redis.del(`forgot-password-otp:${email}`);
+
+    return reply.status(200).send({
+      success: true,
+      message: "Password reset successfully!",
+    });
+  } catch (error) {
+    reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const forgotPasswordRecentOtp = async (request, reply) => {
+  try {
+    const { email } = request.body;
+
+    if (!email) {
+      return reply.status(400).send({
+        success: false,
+        message: "email is required!",
+      });
+    }
+
+    const existingUser = await db.users.where({ email }).first();
+
+    if (!existingUser) {
+      return reply.status(404).send({
+        success: false,
+        message: "User with this email does not exist",
+      });
+    }
+
+    const redis = request.server.redis;
+    const otpData = await redis.hgetall(`forgot-password-otp:${email}`);
+
+    if (!Object.keys(otpData || {}).length) {
+      return reply.status(404).send({
+        success: false,
+        message: "No active OTP session found. Please request a new OTP.",
+      });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpExpiry = Date.now() + 5 * 60 * 1000;
+
+    await redis
+      .multi()
+      .hset(`forgot-password-otp:${email}`, {
+        ...otpData,
+        otp,
+        expiration: otpExpiry.toString(),
+      })
+      .expire(`forgot-password-otp:${email}`, 5 * 60)
+      .exec();
+
+    await forgotPasswordEmail(email, otp);
+
+    return reply.status(200).send({
+      success: true,
+      message: "New OTP sent successfully",
+      otp: process.env.NODE_ENV === "development" ? otp : null,
     });
   } catch (error) {
     reply.status(500).send({
