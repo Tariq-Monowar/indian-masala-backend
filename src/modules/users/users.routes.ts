@@ -7,15 +7,23 @@ import {
   forgotPasswordReset,
   forgotPasswordRecentOtp,
   changePassword,
+  checkAuth,
 } from "./users.controllers";
 import { verifyUser } from "../../middleware/auth.middleware";
+import { upload } from "../../config/storage.config";
 
 export default async function usersRoutes(fastify: FastifyInstance) {
   /*
    * create admin
    * {{_baseUrl}}/api/users/create-admin
    */
-  fastify.post("/create-admin", createAdmin);
+  fastify.post(
+    "/create-admin",
+    {
+      preHandler: [upload.single("image")],
+    },
+    createAdmin,
+  );
 
   /*
    * admin login
@@ -57,11 +65,25 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     { preHandler: [verifyUser("admin")] },
     changePassword,
   );
+
+  /*
+   * check auth
+   * {{_baseUrl}}/api/users/check-auth
+   */
+  fastify.post(
+    "/check-auth",
+    { preHandler: [verifyUser("admin")] },
+    checkAuth,
+  );
 }
+
+
 
 // vps
 
 // 583GptO8K2v
 // +880 1908880294
 // Indianmasala.contact@gmail.com
+//pass vJrpE9aNq3Xf
+// 15398678
 //Your customer ID: 15398678

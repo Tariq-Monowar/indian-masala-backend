@@ -3,6 +3,9 @@ create category
 ______________POST
 {{_baseUrl}}/api/menu/category/create
 
+header: {
+}
+
 query: {
 }
 
@@ -32,6 +35,9 @@ Response: {
 get all category
 ______________GET
 {{_baseUrl}}/api/menu/category/get
+
+header: {
+}
 
 query: {
   - cursor={{id}}
@@ -70,6 +76,9 @@ update category
 ______________PATCH
 {{_baseUrl}}/api/menu/category/update/:id
 
+header: {
+}
+
 query: {
 }
 
@@ -99,6 +108,9 @@ Response: {
 delete category bulk
 ______________DELETE
 {{_baseUrl}}/api/menu/category/bulk
+
+header: {
+}
 
 query: {
 }

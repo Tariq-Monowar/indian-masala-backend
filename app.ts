@@ -11,7 +11,9 @@ const app = Fastify({ logger: true });
 
 export const frontendOrigin = [
   "http://localhost:3000",
+  "http://127.0.0.1:3000",
   "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "http://localhost:5174",
   "http://localhost:5175",
   "http://localhost:5176",
@@ -22,8 +24,19 @@ export const frontendOrigin = [
 ];
 
 app.register(cors, {
-  origin: frontendOrigin,
+  origin(origin, cb) {
+    if (!origin) {
+      cb(null, true);
+      return;
+    }
+    const ok =
+      frontendOrigin.includes(origin) ||
+      origin.startsWith("http://localhost:") ||
+      origin.startsWith("http://127.0.0.1:");
+    cb(null, ok);
+  },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  credentials: true,
 });
 
 registerMultipart(app);

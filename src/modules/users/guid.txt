@@ -3,6 +3,9 @@ create admin
 ______________POST
 {{_baseUrl}}/api/users/create-admin
 
+header: {
+}
+
 query: {
 }
 
@@ -10,11 +13,15 @@ body: {
   - name: string
   - email: string
   - password: string
+  - image: file
 }
 
 note:
   - creates a user with role admin
   - email must be unique
+  - image is optional
+  - Content-Type is multipart/form-data when sending image
+  - saved image is filename only
 
 Response: {
   {
@@ -23,6 +30,7 @@ Response: {
       "id": "uuid",
       "name": "Tariq",
       "email": "tariq@example.com",
+      "image": "1710000000000-avatar.png",
       "role": "admin"
     }
   }
@@ -32,6 +40,9 @@ Response: {
 admin login
 ______________POST
 {{_baseUrl}}/api/users/admin-login
+
+header: {
+}
 
 query: {
 }
@@ -54,6 +65,7 @@ Response: {
       "name": "Tariq",
       "email": "tariq@example.com",
       "phone": null,
+      "image": "1710000000000-avatar.png",
       "role": "admin",
       "createdAt": "2026-09-12T09:00:00.000Z",
       "updatedAt": "2026-09-12T09:00:00.000Z"
@@ -65,6 +77,9 @@ Response: {
 forgotpassword sendotp
 ______________POST
 {{_baseUrl}}/api/users/forgotpassword/sendotp
+
+header: {
+}
 
 query: {
 }
@@ -91,6 +106,9 @@ forgotpassword verifyotp
 ______________POST
 {{_baseUrl}}/api/users/forgotpassword/verifyotp
 
+header: {
+}
+
 query: {
 }
 
@@ -114,6 +132,9 @@ Response: {
 forgotpassword reset
 ______________POST
 {{_baseUrl}}/api/users/forgotpassword/reset
+
+header: {
+}
 
 query: {
 }
@@ -139,6 +160,9 @@ forgotpassword recentotp
 ______________POST
 {{_baseUrl}}/api/users/forgotpassword/recentotp
 
+header: {
+}
+
 query: {
 }
 
@@ -163,6 +187,10 @@ change password
 ______________POST
 {{_baseUrl}}/api/users/change-password
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -180,5 +208,45 @@ Response: {
   {
     "success": true,
     "message": "Password changed successfully"
+  }
+}
+
+=================================
+check auth
+______________POST
+{{_baseUrl}}/api/users/check-auth
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - Authorization admin token
+  - const { id } = request.user
+  - returns the logged in user
+  - missing or invalid user returns unauthorized
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "name": "Tariq",
+      "email": "tariq@example.com",
+      "phone": null,
+      "image": "1710000000000-avatar.png",
+      "role": "admin",
+      "createdAt": "2026-09-12T09:00:00.000Z"
+    }
+  }
+
+  {
+    "success": false,
+    "message": "Unauthorized"
   }
 }

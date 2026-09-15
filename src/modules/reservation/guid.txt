@@ -3,6 +3,9 @@ create reservation
 ______________POST
 {{_baseUrl}}/api/reservation/create
 
+header: {
+}
+
 query: {
 }
 
@@ -46,6 +49,10 @@ Response: {
 get all reservation
 ______________GET
 {{_baseUrl}}/api/reservation/get
+
+header: {
+  - token: Admin
+}
 
 query: {
   - cursor={{id}}
@@ -98,6 +105,10 @@ get single reservation
 ______________GET
 {{_baseUrl}}/api/reservation/get/:id
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -132,6 +143,10 @@ update reservation status
 ______________PATCH
 {{_baseUrl}}/api/reservation/update
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -156,6 +171,10 @@ Response: {
 delete reservation bulk
 ______________DELETE
 {{_baseUrl}}/api/reservation/bulk
+
+header: {
+  - token: Admin
+}
 
 query: {
 }

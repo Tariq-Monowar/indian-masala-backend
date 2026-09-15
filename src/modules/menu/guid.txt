@@ -3,6 +3,10 @@ create menu
 ______________POST
 {{_baseUrl}}/api/menu/create
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -58,6 +62,9 @@ Response: {
 get all menu
 ______________GET
 {{_baseUrl}}/api/menu/get
+
+header: {
+}
 
 query: {
   - cursor={{id}}
@@ -125,6 +132,9 @@ get single menu
 ______________GET
 {{_baseUrl}}/api/menu/get/:id
 
+header: {
+}
+
 query: {
 }
 
@@ -165,6 +175,10 @@ Response: {
 update menu
 ______________PATCH
 {{_baseUrl}}/api/menu/update/:id
+
+header: {
+  - token: Admin
+}
 
 query: {
 }
@@ -222,6 +236,10 @@ delete menu bulk
 ______________DELETE
 {{_baseUrl}}/api/menu/bulk
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -245,6 +263,10 @@ Response: {
 delete image bulk
 ______________DELETE
 {{_baseUrl}}/api/menu/image
+
+header: {
+  - token: Admin
+}
 
 query: {
 }

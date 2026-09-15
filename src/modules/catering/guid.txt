@@ -3,6 +3,9 @@ create catering
 ______________POST
 {{_baseUrl}}/api/catering/create
 
+header: {
+}
+
 query: {
 }
 
@@ -48,6 +51,10 @@ Response: {
 get all catering
 ______________GET
 {{_baseUrl}}/api/catering/get
+
+header: {
+  - token: Admin
+}
 
 query: {
   - cursor={{id}}
@@ -102,6 +109,10 @@ get single catering
 ______________GET
 {{_baseUrl}}/api/catering/get/:id
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -138,6 +149,10 @@ update catering status
 ______________PATCH
 {{_baseUrl}}/api/catering/update
 
+header: {
+  - token: Admin
+}
+
 query: {
 }
 
@@ -162,6 +177,10 @@ Response: {
 delete catering bulk
 ______________DELETE
 {{_baseUrl}}/api/catering/bulk
+
+header: {
+  - token: Admin
+}
 
 query: {
 }

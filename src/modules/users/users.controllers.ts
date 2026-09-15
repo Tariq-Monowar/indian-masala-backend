@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { db } from "../../../prisma/db";
+import { db, prisma } from "../../../prisma/db";
 import { forgotPasswordEmail } from "../../emails/auth.email";
+import { FileService } from "../../config/storage.config";
 
 export const createAdmin = async (request, reply) => {
   try {
@@ -12,6 +13,7 @@ export const createAdmin = async (request, reply) => {
     );
 
     if (missingField) {
+      FileService.removeFile(request.file);
       return reply.status(400).send({
         success: false,
         message: `${missingField} is required!`,
@@ -21,6 +23,7 @@ export const createAdmin = async (request, reply) => {
     const existingUser = await db.users.where({ email }).first();
 
     if (existingUser) {
+      FileService.removeFile(request.file);
       return reply.status(409).send({
         success: false,
         message: "Email already exists",
@@ -28,11 +31,13 @@ export const createAdmin = async (request, reply) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 8);
+    const image = request.file ? request.file.filename : null;
 
     const user = await db.users.create({
       name,
       email,
       password: hashedPassword,
+      image,
       role: "admin",
     });
 
@@ -42,10 +47,12 @@ export const createAdmin = async (request, reply) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        image: user.image,
         role: user.role,
       },
     });
   } catch (error) {
+    FileService.removeFile(request.file);
     request.log.error(error);
     reply.status(500).send({
       success: false,
@@ -100,6 +107,7 @@ export const adminLogin = async (request, reply) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        image: user.image,
         role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -379,6 +387,70 @@ export const changePassword = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       message: "Password changed successfully",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const checkAuth = async (request, reply) => {
+  try {
+    const { id } = request.user;
+
+    if (!id) {
+      return reply.status(401).send({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const plan = prisma.raw.sql`
+      SELECT
+        u.name,
+        u.email,
+        u.phone,
+        u.image,
+        u.role,
+        u."createdAt"
+      FROM users u
+      WHERE u.id = ${id}
+      LIMIT 1
+    `
+      .returnsRow({
+        name: { codecId: "pg/text@1", nullable: true },
+        email: "pg/text@1",
+        phone: { codecId: "pg/text@1", nullable: true },
+        image: { codecId: "pg/text@1", nullable: true },
+        role: "pg/text@1",
+        createdAt: "pg/timestamptz-string@1",
+      })
+      .build();
+
+    const result = await prisma.runtime().query(plan);
+    const list = Array.isArray(result) ? result : [];
+    const user = list[0];
+
+    if (!user) {
+      return reply.status(401).send({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        image: user.image,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
     });
   } catch (error) {
     request.log.error(error);

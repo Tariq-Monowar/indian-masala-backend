@@ -40,6 +40,8 @@ When adding or changing an HTTP endpoint, **before saying done**:
     - `const { name, email, password } = request.body`
     - `const { id } = request.params`
     - `const { page } = request.query`
+    - `const { id } = request.user`
+    - Never `const userId = id || ""`. Use `id` from the destructure.
 11. **Auth** — put `verifyUser(...)` on the route in `*.routes.ts`. Do **not** add auth / 401 checks in the controller.
 12. **No Fastify / Express request types (EXTREME — NEVER skip)** — controllers must NOT import or annotate `FastifyRequest`, `FastifyReply`, Express `Request` / `Response`, or `any` on request/reply.
     - **Forbidden:** `import { FastifyRequest, FastifyReply } from "fastify"`, `async (request: FastifyRequest, reply: FastifyReply)`, `request: any`, `reply: any`.
@@ -53,6 +55,10 @@ When adding or changing an HTTP endpoint, **before saying done**:
 short name
 ______________METHOD
 {{_baseUrl}}/api/module/path
+
+header: {
+  - token: Admin | User
+}
 
 query: {
   - id={{id}}
@@ -71,6 +77,7 @@ Response: {
 ```
 
     - **One base URL line** under `______________METHOD` — do not repeat the same URL with different query strings as separate lines.
+    - **header (EXTREME — NEVER skip)** — every endpoint MUST have `header: { }`. Auth routes list `- token: Admin` or `- token: User` or `- token: Admin | User`. No token means empty braces. Token must match `verifyUser(...)` on the route.
     - **query / body** — list params only (`- name={{name}}` or `- name: type`). No paragraphs inside the braces.
     - **note** — short bullets only.
     - **Response** — one full JSON example per distinct outcome. Keep it real.
@@ -84,7 +91,7 @@ Response: {
 - [ ] Route comment short name + `{{_baseUrl}}...` URL are same-to-same with `guid.txt`
 - [ ] `src/modules/index.ts` registers the module; `app.ts` mounts it at `/api`
 - [ ] `guid.txt` matches the real URL and response shape
-- [ ] `guid.txt` uses the clean shape (METHOD / URL / query / body / note / Response)
+- [ ] `guid.txt` uses the clean shape (METHOD / URL / header / query / body / note / Response)
 - [ ] GET list endpoints return `pagination: { hasMore }`
 - [ ] No module-level helpers / shared select objects
 - [ ] Simple `request.body` / `request.params` / `request.query` destructuring only

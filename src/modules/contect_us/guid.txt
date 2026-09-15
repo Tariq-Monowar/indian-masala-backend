@@ -3,6 +3,9 @@ create contect_us
 ______________POST
 {{_baseUrl}}/api/contect_us/create
 
+header: {
+}
+
 query: {
 }
 
@@ -37,6 +40,10 @@ Response: {
 get all contect_us
 ______________GET
 {{_baseUrl}}/api/contect_us/get
+
+header: {
+  - token: Admin
+}
 
 query: {
   - cursor={{id}}
@@ -81,6 +88,10 @@ Response: {
 delete contect_us bulk
 ______________DELETE
 {{_baseUrl}}/api/contect_us/bulk
+
+header: {
+  - token: Admin
+}
 
 query: {
 }
