@@ -52,5 +52,16 @@ export default async function usersRoutes(fastify: FastifyInstance) {
    * change password
    * {{_baseUrl}}/api/users/change-password
    */
-  fastify.post("/change-password", { preHandler: [verifyUser("admin")] }, changePassword);
+  fastify.post(
+    "/change-password",
+    { preHandler: [verifyUser("admin")] },
+    changePassword,
+  );
 }
+
+// vps
+
+// 583GptO8K2v
+// +880 1908880294
+// Indianmasala.contact@gmail.com
+//Your customer ID: 15398678
