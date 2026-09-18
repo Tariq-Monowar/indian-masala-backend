@@ -113,9 +113,7 @@ export const getAllReservation = async (request, reply) => {
       request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
-    const searchPattern = search
-      ? "%" + search.split(" ").join("%") + "%"
-      : "";
+    const searchPattern = search ? "%" + search.split(" ").join("%") + "%" : "";
     const statusCsv = status || "";
     const cursorId = cursor || "";
     const useStart = started_date ? 1 : 0;
