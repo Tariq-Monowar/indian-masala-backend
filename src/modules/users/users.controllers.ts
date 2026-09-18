@@ -140,7 +140,7 @@ export const forgotPasswordSendOtp = async (request, reply) => {
     const otpExpiry = Date.now() + 5 * 60 * 1000;
     const redis = request.server.redis;
 
-    await notify({
+    void notify({
       email: {
         to: email,
         subject: "Password Reset Verification Code",
@@ -329,7 +329,7 @@ export const forgotPasswordRecentOtp = async (request, reply) => {
       .expire(`forgot-password-otp:${email}`, 5 * 60)
       .exec();
 
-    await notify({
+    void notify({
       email: {
         to: email,
         subject: "Password Reset Verification Code",

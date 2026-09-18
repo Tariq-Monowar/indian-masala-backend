@@ -20,6 +20,7 @@ body: {
 note:
   - first_name, email, message are required
   - last_name and phone are optional
+  - sends in-app notification to all admin
 
 Response: {
   {

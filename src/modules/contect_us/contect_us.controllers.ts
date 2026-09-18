@@ -1,4 +1,5 @@
 import { db, prisma } from "../../../prisma/db";
+import { notify } from "../../notifications";
 
 export const createContectUs = async (request, reply) => {
   try {
@@ -31,6 +32,20 @@ export const createContectUs = async (request, reply) => {
       email,
       phone,
       message,
+    });
+
+    const fullName = last_name ? `${first_name} ${last_name}` : first_name;
+    const shortMessage =
+      message.length > 80 ? `${message.slice(0, 80)}…` : message;
+
+    void notify({
+      io: request.server.io,
+      inApp: {
+        message: `${fullName} sent a message${phone ? ` (${phone})` : ""}: "${shortMessage}". Reply to ${email}.`,
+        type: "contact_us",
+        object_id: contect.id,
+        role: "admin",
+      },
     });
 
     return reply.status(201).send({

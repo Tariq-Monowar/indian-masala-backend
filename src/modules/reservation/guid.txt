@@ -26,6 +26,7 @@ note:
   - date is YYYY-MM-DD
   - time is HH:MM or HH:MM:SS
   - status defaults to pending
+  - sends in-app notification to all admin
 
 Response: {
   {

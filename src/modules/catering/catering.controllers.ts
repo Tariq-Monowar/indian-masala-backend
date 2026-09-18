@@ -70,7 +70,7 @@ export const createCatering = async (request, reply) => {
       status: status || "pending",
     });
 
-    await notify({
+    void notify({
       io: request.server.io,
       inApp: {
         message: `${name} requested catering${event_type ? ` for a ${event_type}` : ""} on ${date} for ${number_of_guests} guests.`,
