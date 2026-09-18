@@ -27,6 +27,7 @@ note:
   - email, event_type, location, special_requirements, description are optional
   - date is YYYY-MM-DD
   - status defaults to pending
+  - sends in-app notification to all admin
 
 Response: {
   {

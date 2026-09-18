@@ -1,4 +1,5 @@
 import { db, prisma } from "../../../prisma/db";
+import { notify } from "../../notifications";
 
 export const createCatering = async (request, reply) => {
   try {
@@ -67,6 +68,16 @@ export const createCatering = async (request, reply) => {
       special_requirements,
       description,
       status: status || "pending",
+    });
+
+    await notify({
+      io: request.server.io,
+      inApp: {
+        message: `${name} requested catering${event_type ? ` for a ${event_type}` : ""} on ${date} for ${number_of_guests} guests.`,
+        type: "catering",
+        object_id: catering.id,
+        role: "admin",
+      },
     });
 
     return reply.status(201).send({
