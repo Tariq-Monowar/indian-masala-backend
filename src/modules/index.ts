@@ -4,6 +4,8 @@ import menu from "./menu/menu.routes";
 import reservation from "./reservation/reservation.routes";
 import catering from "./catering/catering.routes";
 import contect_us from "./contect_us/contect_us.routes";
+import company_info from "./company_info/company_info.routes";
+import orders from "./orders/orders.routes";
 
 export default async function routes(fastify: FastifyInstance) {
   fastify.register(users, { prefix: "/users" });
@@ -11,4 +13,6 @@ export default async function routes(fastify: FastifyInstance) {
   fastify.register(reservation, { prefix: "/reservation" });
   fastify.register(catering, { prefix: "/catering" });
   fastify.register(contect_us, { prefix: "/contect_us" });
+  fastify.register(company_info, { prefix: "/company_info" });
+  fastify.register(orders, { prefix: "/orders" });
 }

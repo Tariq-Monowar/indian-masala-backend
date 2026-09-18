@@ -41,7 +41,7 @@ export const createContectUs = async (request, reply) => {
     void notify({
       io: request.server.io,
       inApp: {
-        message: `${fullName} sent a message${phone ? ` (${phone})` : ""}: "${shortMessage}". Reply to ${email}.`,
+        message: `${fullName} sent a message${phone ? ` (${phone})` : ""}: "${shortMessage}"`,
         type: "contact_us",
         object_id: contect.id,
         role: "admin",

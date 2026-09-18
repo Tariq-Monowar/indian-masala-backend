@@ -1,0 +1,90 @@
+=================================
+get company_info
+______________GET
+{{_baseUrl}}/api/company_info/get
+
+header: {
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - public
+  - returns the single company info row
+  - data is null when none exists
+  - reads from redis key company_info
+  - loads from db and sets redis when cache is empty
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "company_name": "Indian Masala",
+      "company_email": "hello@indianmasala.com",
+      "company_phone": "01712345678",
+      "address": "12 Main Street",
+      "city": "Dhaka",
+      "country": "Bangladesh",
+      "location_label": "Gulshan",
+      "createdAt": "2026-09-18T10:00:00.000Z",
+      "updatedAt": "2026-09-18T10:00:00.000Z"
+    }
+  }
+
+  {
+    "success": true,
+    "data": null
+  }
+}
+
+=================================
+create company_info
+______________POST
+{{_baseUrl}}/api/company_info/create
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+  - company_name: string
+  - company_email: string
+  - company_phone: string
+  - address: string
+  - city: string
+  - country: string
+  - location_label: string
+}
+
+note:
+  - send jwt in token header
+  - all fields optional
+  - creates when no row exists
+  - updates the existing row when one already exists
+  - deletes redis key company_info after save
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "company_name": "Indian Masala",
+      "company_email": "hello@indianmasala.com",
+      "company_phone": "01712345678",
+      "address": "12 Main Street",
+      "city": "Dhaka",
+      "country": "Bangladesh",
+      "location_label": "Gulshan",
+      "createdAt": "2026-09-18T10:00:00.000Z",
+      "updatedAt": "2026-09-18T10:00:00.000Z"
+    }
+  }
+}

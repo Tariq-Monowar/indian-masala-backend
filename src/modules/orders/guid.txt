@@ -1,0 +1,85 @@
+=================================
+create order
+______________POST
+{{_baseUrl}}/api/orders/create
+
+header: {
+  - token: User (optional)
+}
+
+query: {
+}
+
+body: {
+  - name: string
+  - email: string
+  - phone: string
+  - order_item: [
+      {
+        id: string
+        quantity: number
+      }
+    ]
+}
+
+note:
+  - with token: only order_item required, order created now (no otp)
+  - first time (new email, no token): create customer + token + order (no otp)
+  - second time (email already exists, no token): save food in redis 10m, send otp 10m
+  - then call verify-otp with email + otp to create order
+  - order_item id is menu id
+  - system sets unit_price and total_price
+
+Response (otp sent): {
+  {
+    "success": true,
+    "message": "OTP sent to your email",
+    "otp": null
+  }
+}
+
+Response: {
+  {
+    "success": true,
+    "message": "Order created successfully"
+  }
+}
+
+Response (new customer): {
+  {
+    "success": true,
+    "message": "Order created successfully",
+    "token": "jwt..."
+  }
+}
+
+=================================
+verify order otp
+______________POST
+{{_baseUrl}}/api/orders/verify-otp
+
+header: {
+}
+
+query: {
+}
+
+body: {
+  - email: string
+  - otp: string
+}
+
+note:
+  - call after create order sent otp
+  - food + otp live in redis for 10 minutes
+  - after match otp, order is created
+  - returns jwt token for the customer
+  - notifies all admin
+
+Response: {
+  {
+    "success": true,
+    "message": "Order created successfully",
+    "token": "jwt..."
+  }
+}

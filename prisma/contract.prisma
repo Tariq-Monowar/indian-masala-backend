@@ -10,6 +10,7 @@ model users {
   role      usersRole @default(customer)
 
   notification notification[]
+  order order[]
 
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
@@ -19,6 +20,23 @@ enum usersRole {
   @@type("pg/text@1")
   admin    = "admin"
   customer = "customer"
+}
+
+model company_info {
+  id        String    @id @default(uuid())
+
+  company_name String?
+  company_email String?
+  company_phone String?
+  address String?
+  city String?
+  country String?
+  location_label String?
+
+  menu menu[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
 }
 
 
@@ -38,6 +56,10 @@ model menu {
 
   category_id String?
   category category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  company_info_id String?
+  company_info company_info @relation(fields: [company_info_id], references: [id], onDelete: Cascade)
+
   category_name String?
   icon String?
 
@@ -47,6 +69,7 @@ model menu {
   spicy_level SpicyLevel?
 
   menu_image menu_image[]
+  order_item order_item[]
 
   description_en String?
   description_fr String?
@@ -78,6 +101,48 @@ model menu_image {
 
 
 
+model order {
+  id        String    @id @default(uuid())
+
+  user_id String?
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  total_price Float?
+  status OrderStatus?
+
+  order_item order_item[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+
+enum OrderStatus {
+  @@type("pg/text@1")
+
+  pending    = "pending"
+  confirmed  = "confirmed"
+  preparing  = "preparing"
+  completed  = "completed"
+  cancelled  = "cancelled"
+}
+
+model order_item {
+  id        String    @id @default(uuid())
+
+  order_id String?
+  order order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  menu_id String?
+  menu menu @relation(fields: [menu_id], references: [id], onDelete: Cascade)
+
+  unit_price Float?
+  quantity Int?
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
 
 //reservation
 model reservation {

@@ -9,4 +9,5 @@ const prisma = postgres<Contract>({
 });
 
 export const db = prisma.orm.public;
+export const companyInfo = (db as any).company_info;
 export { prisma };
