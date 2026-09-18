@@ -69,7 +69,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - cursor is the last catering id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
@@ -120,7 +120,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - id is in the URL
 
 Response: {
@@ -162,7 +162,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more catering ids
   - status is required
 
@@ -190,7 +190,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more catering ids
   - deletes matching caterings
 

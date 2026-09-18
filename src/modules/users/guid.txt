@@ -54,22 +54,13 @@ body: {
 
 note:
   - login with email and password
-  - token has no expiresIn
+  - token payload is id, email, role
+  - token has no expiresIn and no exp
 
 Response: {
   {
     "success": true,
-    "token": "jwt",
-    "data": {
-      "id": "uuid",
-      "name": "Tariq",
-      "email": "tariq@example.com",
-      "phone": null,
-      "image": "1710000000000-avatar.png",
-      "role": "admin",
-      "createdAt": "2026-09-12T09:00:00.000Z",
-      "updatedAt": "2026-09-12T09:00:00.000Z"
-    }
+    "token": "jwt"
   }
 }
 
@@ -200,7 +191,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - current_password must match the logged in user
   - new_password replaces the old password
 
@@ -213,7 +204,7 @@ Response: {
 
 =================================
 check auth
-______________POST
+______________GET
 {{_baseUrl}}/api/users/check-auth
 
 header: {
@@ -227,7 +218,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send login jwt in token header
   - const { id } = request.user
   - returns the logged in user
   - missing or invalid user returns unauthorized

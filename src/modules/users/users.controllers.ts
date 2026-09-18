@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db, prisma } from "../../../prisma/db";
-import { forgotPasswordEmail } from "../../emails/auth.email";
+import { notify } from "../../notifications";
+import { authOtpTemplate } from "../../notifications/email/templates/auth.otp";
 import { FileService } from "../../config/storage.config";
 
 export const createAdmin = async (request, reply) => {
@@ -95,23 +96,17 @@ export const adminLogin = async (request, reply) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, id: user.id, role: user.role },
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
       process.env.JWT_SECRET!,
     );
 
     return reply.status(200).send({
       success: true,
       token,
-      data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        image: user.image,
-        role: user.role,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
     });
   } catch (error) {
     reply.status(500).send({
@@ -145,7 +140,13 @@ export const forgotPasswordSendOtp = async (request, reply) => {
     const otpExpiry = Date.now() + 5 * 60 * 1000;
     const redis = request.server.redis;
 
-    await forgotPasswordEmail(email, otp);
+    await notify({
+      email: {
+        to: email,
+        subject: "Password Reset Verification Code",
+        html: authOtpTemplate(otp),
+      },
+    });
 
     await redis
       .multi()
@@ -328,7 +329,13 @@ export const forgotPasswordRecentOtp = async (request, reply) => {
       .expire(`forgot-password-otp:${email}`, 5 * 60)
       .exec();
 
-    await forgotPasswordEmail(email, otp);
+    await notify({
+      email: {
+        to: email,
+        subject: "Password Reset Verification Code",
+        html: authOtpTemplate(otp),
+      },
+    });
 
     return reply.status(200).send({
       success: true,

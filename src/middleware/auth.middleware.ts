@@ -3,9 +3,14 @@ import jwt from "jsonwebtoken";
 
 export const verifyUser = (...allowedRoles: string[]) => {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    const authHeader = request.headers.authorization;
+    const raw =
+      request.headers.token ||
+      request.headers.authorization ||
+      request.headers["x-access-token"];
 
-    if (!authHeader) {
+    let token = Array.isArray(raw) ? raw[0] : raw;
+
+    if (!token) {
       reply.status(401).send({
         success: false,
         message: "No token provided",
@@ -13,13 +18,21 @@ export const verifyUser = (...allowedRoles: string[]) => {
       return;
     }
 
+    token = String(token).trim();
+    if (/^bearer\s+/i.test(token)) {
+      token = token.replace(/^bearer\s+/i, "").trim();
+    }
+    if (
+      (token.startsWith('"') && token.endsWith('"')) ||
+      (token.startsWith("'") && token.endsWith("'"))
+    ) {
+      token = token.slice(1, -1).trim();
+    }
+
     try {
-      const token = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : authHeader;
       request.user = jwt.verify(
         token,
-        process.env.JWT_SECRET as string
+        process.env.JWT_SECRET!,
       ) as FastifyRequest["user"];
 
       if (
@@ -35,9 +48,18 @@ export const verifyUser = (...allowedRoles: string[]) => {
         return;
       }
     } catch (error) {
+      request.log.error(
+        {
+          err: error,
+          hasTokenHeader: Boolean(request.headers.token),
+          hasAuthorization: Boolean(request.headers.authorization),
+          tokenPreview: token.slice(0, 20),
+        },
+        "jwt verify failed",
+      );
       reply.status(401).send({
         success: false,
-        message: "Invalid or expired token",
+        message: "Invalid token",
       });
       return;
     }

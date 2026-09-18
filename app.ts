@@ -36,6 +36,12 @@ app.register(cors, {
     cb(null, ok);
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "token",
+    "X-Access-Token",
+  ],
   credentials: true,
 });
 

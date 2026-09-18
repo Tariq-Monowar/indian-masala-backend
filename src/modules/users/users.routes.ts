@@ -70,7 +70,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
    * check auth
    * {{_baseUrl}}/api/users/check-auth
    */
-  fastify.post(
+  fastify.get(
     "/check-auth",
     { preHandler: [verifyUser("admin")] },
     checkAuth,

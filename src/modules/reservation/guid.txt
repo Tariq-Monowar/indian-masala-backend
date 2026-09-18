@@ -67,7 +67,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - cursor is the last reservation id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
@@ -116,7 +116,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - id is in the URL
 
 Response: {
@@ -156,7 +156,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more reservation ids
   - status is required
 
@@ -184,7 +184,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more reservation ids
   - deletes matching reservations
 

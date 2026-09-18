@@ -9,14 +9,15 @@ export default fp(async (fastify) => {
   io.on("connection", (socket) => {
     fastify.log.info(`Socket connected: ${socket.id}`);
 
-    socket.on("join_room", ({ roomId, userType }) => {
-      socket.join(roomId);
+    socket.on("join", ({ id, role }) => {
+      if (!id || !role) return;
 
-      if (userType === "admin") {
-        fastify.log.info(`Admin joined room: ${roomId}`);
-      } else {
-        fastify.log.info(`User joined room: ${roomId}`);
-      }
+      // personal room → message one user
+      socket.join(id);
+      // role room → message all admin / customer / etc later
+      socket.join(role);
+
+      fastify.log.info(`${role} joined: ${id}`);
     });
 
     socket.on("disconnect", () => {

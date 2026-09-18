@@ -24,6 +24,10 @@
       "model": "menu_image",
       "namespace": "public"
     },
+    "notification": {
+      "model": "notification",
+      "namespace": "public"
+    },
     "reservation": {
       "model": "reservation",
       "namespace": "public"
@@ -93,6 +97,27 @@
               {
                 "name": "hot",
                 "value": "hot"
+              }
+            ]
+          },
+          "in_app_notification_type": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "reservation",
+                "value": "reservation"
+              },
+              {
+                "name": "catering",
+                "value": "catering"
+              },
+              {
+                "name": "new_order",
+                "value": "new_order"
+              },
+              {
+                "name": "contact_us",
+                "value": "contact_us"
               }
             ]
           },
@@ -665,6 +690,109 @@
               "table": "menu_image"
             }
           },
+          "notification": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "is_read": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "message": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "object_id": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "type": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "in_app_notification_type",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "user_id": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "user_id"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "users",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "is_read": {
+                  "column": "is_read"
+                },
+                "message": {
+                  "column": "message"
+                },
+                "object_id": {
+                  "column": "object_id"
+                },
+                "type": {
+                  "column": "type"
+                },
+                "user_id": {
+                  "column": "user_id"
+                }
+              },
+              "namespaceId": "public",
+              "table": "notification"
+            }
+          },
           "reservation": {
             "fields": {
               "createdAt": {
@@ -864,7 +992,23 @@
                 }
               }
             },
-            "relations": {},
+            "relations": {
+              "notification": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "user_id"
+                  ]
+                },
+                "to": {
+                  "model": "notification",
+                  "namespace": "public"
+                }
+              }
+            },
             "storage": {
               "fields": {
                 "createdAt": {
@@ -1288,6 +1432,101 @@
               },
               "uniques": []
             },
+            "notification": {
+              "checks": [
+                {
+                  "expression": "\"type\" IN ('reservation', 'catering', 'new_order', 'contact_us')",
+                  "name": "notification_type_check_ed1a3f28",
+                  "prefix": "notification_type_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "is_read": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "message": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "object_id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "type": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "in_app_notification_type",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "user_id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "user_id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "notification"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "users"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "user_id"
+                  ],
+                  "name": "notification_user_id_idx_6c952402",
+                  "prefix": "notification_user_id_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "reservation": {
               "checks": [
                 {
@@ -1484,6 +1723,15 @@
                 "hot"
               ]
             },
+            "in_app_notification_type": {
+              "kind": "valueSet",
+              "values": [
+                "reservation",
+                "catering",
+                "new_order",
+                "contact_us"
+              ]
+            },
             "usersRole": {
               "kind": "valueSet",
               "values": [
@@ -1497,10 +1745,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "e478439af5c7570dcb0f73e4108d804be0bc080fd81046a555d60b8437467677"
+    "storageHash": "7bd0c4231988b7c97529c6ad02636ac1beff10f01bde2ae6d735a64b3df8c9c2"
   },
   "execution": {
-    "executionHash": "862b9a8ccd1607c668a26366438764104c6188ddb1f4b8c616c0005285e21745",
+    "executionHash": "f754a03813ed56af815428eec0c5f2242f355bf031d3ff4785c487d73e188c44",
     "mutations": {
       "defaults": [
         {
@@ -1631,6 +1879,17 @@
             "column": "updatedAt",
             "namespace": "public",
             "table": "menu_image"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "notification"
           }
         },
         {

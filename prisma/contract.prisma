@@ -9,6 +9,8 @@ model users {
   image     String?
   role      usersRole @default(customer)
 
+  notification notification[]
+
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }
@@ -141,4 +143,29 @@ model contect_us {
 
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
+}
+
+
+model notification {
+  id        String    @id @default(uuid())
+
+  message String?
+  is_read Boolean @default(false)
+
+  user_id String?
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  object_id String?
+  type in_app_notification_type?
+
+  createdAt TimestamptzString @default(now())
+}
+
+enum in_app_notification_type {
+  @@type("pg/text@1")
+
+  reservation = "reservation"
+  catering = "catering"
+  new_order = "new_order"
+  contact_us = "contact_us"
 }

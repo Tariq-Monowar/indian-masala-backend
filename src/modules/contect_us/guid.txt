@@ -56,7 +56,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - cursor is the last contect_us id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
@@ -101,7 +101,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more contect_us ids
   - deletes matching rows
 

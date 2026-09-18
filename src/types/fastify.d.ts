@@ -14,12 +14,12 @@ declare module "@fastify/jwt" {
   interface FastifyJWT {
     payload: {
       id: string;
-      restaurantId: string;
+      email: string;
       role: string;
     };
     user: {
       id: string;
-      restaurantId: string;
+      email: string;
       role: string;
     };
   }
@@ -29,7 +29,7 @@ declare module "socket.io" {
   interface SocketData {
     user: {
       id: string;
-      restaurantId: string;
+      email: string;
       role: string;
     };
   }

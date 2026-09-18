@@ -23,7 +23,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - Content-Type is multipart/form-data
   - upload.array("images", 10)
   - all fields are optional
@@ -196,7 +196,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - id is in the URL
   - Content-Type is multipart/form-data
   - upload.array("images", 10)
@@ -248,7 +248,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more menu ids
   - deletes matching menus and their images
 
@@ -276,7 +276,7 @@ body: {
 }
 
 note:
-  - Authorization admin token
+  - send jwt in token header
   - send one or more image ids
   - deletes matching image rows and files
 
