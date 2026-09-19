@@ -49,8 +49,10 @@ header: {
 query: {
   - cursor={{id}}
   - limit={{limit}}
+  - search={{search}}
   - started_date={{YYYY-MM-DD}}
   - end_date={{YYYY-MM-DD}}
+  - object_id={{id}}
 }
 
 body: {
@@ -61,6 +63,9 @@ note:
   - cursor is the last contect_us id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
+  - object_id pins that row first, then other rows
+  - strong search: id, first_name, last_name, email, phone (digits too), message
+  - spaces in search are flexible
   - started_date and end_date filter createdAt
   - end_date includes that full day
 

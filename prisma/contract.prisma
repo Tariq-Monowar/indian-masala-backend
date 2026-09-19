@@ -104,6 +104,9 @@ model menu_image {
 model order {
   id        String    @id @default(uuid())
 
+  //0001, 0002, 0003, ...
+  order_number String?
+
   user_id String?
   user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
 

@@ -71,10 +71,17 @@ export const createContectUs = async (request, reply) => {
 
 export const getAllContectUs = async (request, reply) => {
   try {
-    const { cursor, limit, started_date, end_date } = request.query;
+    const { cursor, limit, search, started_date, end_date, object_id } =
+      request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
+    const searchPattern = search
+      ? "%" + search.split(" ").join("%") + "%"
+      : "";
+    const digitSearch = search ? String(search).replace(/\D/g, "") : "";
+    const digitPattern = digitSearch ? "%" + digitSearch + "%" : "";
     const cursorId = cursor || "";
+    const pinnedId = object_id || "";
     const useStart = started_date ? 1 : 0;
     const startDate = started_date || "1970-01-01";
     const useEnd = end_date ? 1 : 0;
@@ -92,7 +99,25 @@ export const getAllContectUs = async (request, reply) => {
         c."updatedAt"
       FROM contect_us c
       WHERE
-        (${useStart} = 0 OR c."createdAt" >= ${startDate}::date)
+        (
+          ${searchPattern} = ''
+          OR (
+            COALESCE(c.id, '') || ' ' ||
+            COALESCE(c.first_name, '') || ' ' ||
+            COALESCE(c.last_name, '') || ' ' ||
+            COALESCE(c.first_name, '') || ' ' || COALESCE(c.last_name, '') || ' ' ||
+            COALESCE(c.email, '') || ' ' ||
+            COALESCE(c.phone, '') || ' ' ||
+            regexp_replace(COALESCE(c.phone, ''), '[^0-9]', '', 'g') || ' ' ||
+            COALESCE(c.message, '')
+          ) ILIKE ${searchPattern}
+          OR (
+            ${digitPattern} <> ''
+            AND regexp_replace(COALESCE(c.phone, ''), '[^0-9]', '', 'g')
+              LIKE ${digitPattern}
+          )
+        )
+        AND (${useStart} = 0 OR c."createdAt" >= ${startDate}::date)
         AND (${useEnd} = 0 OR c."createdAt" < (${endDate}::date + interval '1 day'))
         AND (
           ${cursorId} = ''
@@ -101,7 +126,10 @@ export const getAllContectUs = async (request, reply) => {
             SELECT x."createdAt", x.id FROM contect_us x WHERE x.id = ${cursorId}
           )
         )
-      ORDER BY c."createdAt" DESC, c.id DESC
+      ORDER BY
+        CASE WHEN c.id = ${pinnedId} THEN 0 ELSE 1 END,
+        c."createdAt" DESC,
+        c.id DESC
       LIMIT ${take + 1}
     `
       .returnsRow({

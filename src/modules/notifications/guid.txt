@@ -1,0 +1,125 @@
+=================================
+get all notifications
+______________GET
+{{_baseUrl}}/api/notifications/get
+
+header: {
+  - token: Admin
+}
+
+query: {
+  - cursor={{id}}
+  - limit={{limit}}
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - cursor is the last notification id from the previous page
+  - limit defaults to 20 and max is 50
+  - do not send cursor on the first page
+  - returns admin broadcast notifications and this user notifications
+
+Response: {
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "uuid",
+        "message": "New order #0001 for 24.5 with 2 item(s).",
+        "is_read": false,
+        "user_id": null,
+        "object_id": "uuid",
+        "type": "new_order",
+        "createdAt": "2026-09-19T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": false
+    }
+  }
+}
+
+=================================
+get unread count
+______________GET
+{{_baseUrl}}/api/notifications/unread-count
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - counts unread admin broadcast notifications and this user notifications
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "count": 5
+    }
+  }
+}
+
+=================================
+mark all unread as read
+______________PATCH
+{{_baseUrl}}/api/notifications/read-all
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - marks all unread admin broadcast notifications and this user notifications as read
+
+Response: {
+  {
+    "success": true,
+    "message": "Notifications marked as read successfully"
+  }
+}
+
+=================================
+delete notification bulk
+______________DELETE
+{{_baseUrl}}/api/notifications/bulk
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - send jwt in token header
+  - send one or more notification ids
+  - deletes matching notifications
+
+Response: {
+  {
+    "success": true,
+    "message": "Notifications deleted successfully"
+  }
+}

@@ -1,0 +1,89 @@
+=================================
+get dashboard stats
+______________GET
+{{_baseUrl}}/api/dashboard/get
+
+header: {
+  - token: Admin
+}
+
+query: {
+  - period={{today|7days|month|year}}
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - period defaults to today
+  - today compares vs yesterday
+  - 7days compares vs previous 7 days
+  - month compares vs last calendar month
+  - year compares vs last calendar year
+  - change_percent is absolute number for UI like 10% vs yesterday
+  - direction is up, down or flat
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "period": "today",
+      "compare_label": "vs yesterday",
+      "orders": {
+        "count": 25,
+        "change_percent": 10,
+        "direction": "up"
+      },
+      "reservations": {
+        "count": 12,
+        "change_percent": 6,
+        "direction": "up"
+      },
+      "catering": {
+        "count": 4,
+        "change_percent": 8,
+        "direction": "down"
+      }
+    }
+  }
+}
+
+=================================
+get orders this week
+______________GET
+{{_baseUrl}}/api/dashboard/orders-week
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - last 7 days including today
+  - days with no orders return count 0
+  - total is sum of all day counts
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "total": 162,
+      "points": [
+        { "day": "Mon", "date": "2026-09-14", "count": 18 },
+        { "day": "Tue", "date": "2026-09-15", "count": 22 },
+        { "day": "Wed", "date": "2026-09-16", "count": 15 },
+        { "day": "Thu", "date": "2026-09-17", "count": 28 },
+        { "day": "Fri", "date": "2026-09-18", "count": 25 },
+        { "day": "Sat", "date": "2026-09-19", "count": 33 },
+        { "day": "Sun", "date": "2026-09-20", "count": 20 }
+      ]
+    }
+  }
+}

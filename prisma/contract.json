@@ -1013,6 +1013,13 @@
                   "kind": "scalar"
                 }
               },
+              "order_number": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "status": {
                 "nullable": true,
                 "type": {
@@ -1088,6 +1095,9 @@
                 "id": {
                   "column": "id"
                 },
+                "order_number": {
+                  "column": "order_number"
+                },
                 "status": {
                   "column": "status"
                 },
@@ -1111,13 +1121,6 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-string@1",
-                  "kind": "scalar"
-                }
-              },
-              "food_name": {
-                "nullable": true,
-                "type": {
-                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -1200,9 +1203,6 @@
               "fields": {
                 "createdAt": {
                   "column": "createdAt"
-                },
-                "food_name": {
-                  "column": "food_name"
                 },
                 "id": {
                   "column": "id"
@@ -2095,6 +2095,11 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "order_number": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "status": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -2168,11 +2173,6 @@
                   },
                   "nativeType": "timestamptz",
                   "nullable": false
-                },
-                "food_name": {
-                  "codecId": "pg/text@1",
-                  "nativeType": "text",
-                  "nullable": true
                 },
                 "id": {
                   "codecId": "pg/text@1",
@@ -2494,7 +2494,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "5fcfe551ea60e0e1f3aae2bf45d26ce112514e5f5c0e5d619e29aa241bba3135"
+    "storageHash": "a4c7c041e86069aa06db260e30a050ba580bd282f843d534a0d8bbc2bc73ba78"
   },
   "execution": {
     "executionHash": "72cd0e075fb67463932d234a1d3431c94fb57ecd2bd1b63384e5323e56a70ad7",

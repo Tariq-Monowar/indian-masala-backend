@@ -29,6 +29,7 @@ note:
   - then call verify-otp with email + otp to create order
   - order_item id is menu id
   - system sets unit_price and total_price
+  - system sets order_number as 0001, 0002, 0003, ...
 
 Response (otp sent): {
   {
@@ -81,5 +82,169 @@ Response: {
     "success": true,
     "message": "Order created successfully",
     "token": "jwt..."
+  }
+}
+
+=================================
+get all orders
+______________GET
+{{_baseUrl}}/api/orders/get
+
+header: {
+  - token: Admin
+}
+
+query: {
+  - cursor={{id}}
+  - limit={{limit}}
+  - search={{search}}
+  - status={{status,status}}
+  - started_date={{YYYY-MM-DD}}
+  - end_date={{YYYY-MM-DD}}
+  - object_id={{id}}
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - cursor is the last order id from the previous page
+  - limit defaults to 20 and max is 50
+  - do not send cursor on the first page
+  - object_id pins that row first, then other rows
+  - strong search: order id, order_number (0001 or 1), name, email, phone (digits too), status, total_price, food name, quantity
+  - spaces in search are flexible (tariq chicken matches)
+  - status filter: pending, confirmed, preparing, completed, cancelled
+  - status=pending,confirmed returns those statuses (case insensitive)
+  - started_date and end_date filter createdAt
+  - end_date includes that full day
+
+Response: {
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "uuid",
+        "order_number": "0001",
+        "name": "Tariq Monowar",
+        "email": "tariq@example.com",
+        "phone": "01712345678",
+        "order": [
+          {
+            "name": "Butter Chicken",
+            "quantity": 2
+          }
+        ],
+        "total_price": 24.5,
+        "status": "pending",
+        "createdAt": "2026-09-19T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": false
+    }
+  }
+}
+
+=================================
+get single order
+______________GET
+{{_baseUrl}}/api/orders/get/:id
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - id is in the URL
+  - image is first menu image filename
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "order_number": "0001",
+      "customer": {
+        "name": "Tariq Monowar",
+        "email": "tariq@example.com",
+        "phone": "01712345678"
+      },
+      "orders": [
+        {
+          "name": "Butter Chicken",
+          "quantity": 2,
+          "image": "1710000000000-one.jpg"
+        }
+      ],
+      "total_price": 24.5,
+      "status": "pending",
+      "createdAt": "2026-09-19T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+update order status
+______________PATCH
+{{_baseUrl}}/api/orders/update
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+  - ids: string[]
+  - status: pending | confirmed | preparing | completed | cancelled
+}
+
+note:
+  - send jwt in token header
+  - send one or more order ids
+  - status is required
+
+Response: {
+  {
+    "success": true,
+    "message": "Order status updated successfully"
+  }
+}
+
+=================================
+delete order bulk
+______________DELETE
+{{_baseUrl}}/api/orders/bulk
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+  - ids: string[]
+}
+
+note:
+  - send jwt in token header
+  - send one or more order ids
+  - deletes matching orders
+
+Response: {
+  {
+    "success": true,
+    "message": "Orders deleted successfully"
   }
 }

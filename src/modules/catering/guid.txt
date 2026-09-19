@@ -64,6 +64,7 @@ query: {
   - status={{status,status}}
   - started_date={{YYYY-MM-DD}}
   - end_date={{YYYY-MM-DD}}
+  - object_id={{id}}
 }
 
 body: {
@@ -74,9 +75,11 @@ note:
   - cursor is the last catering id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
-  - search matches name, phone, email, event_type, location, status, date, number_of_guests
+  - object_id pins that row first, then other rows
+  - strong search: id, name, email, phone (digits too), event_type, location, status, description, special_requirements, date, number_of_guests
+  - spaces in search are flexible
   - status is pending, confirmed, cancelled, completed
-  - status=pending,confirmed returns those statuses
+  - status=pending,confirmed returns those statuses (case insensitive)
   - started_date and end_date filter createdAt
   - end_date includes that full day
   - description and special_requirements are not returned

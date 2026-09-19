@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'5fcfe551ea60e0e1f3aae2bf45d26ce112514e5f5c0e5d619e29aa241bba3135'>;
+  StorageHashBase<'a4c7c041e86069aa06db260e30a050ba580bd282f843d534a0d8bbc2bc73ba78'>;
 export type ExecutionHash =
   ExecutionHashBase<'72cd0e075fb67463932d234a1d3431c94fb57ecd2bd1b63384e5323e56a70ad7'>;
 export type ProfileHash =
@@ -319,6 +319,7 @@ export type FieldOutputTypes = {
     };
     readonly order: {
       readonly id: CodecTypes['pg/text@1']['output'];
+      readonly order_number: CodecTypes['pg/text@1']['output'] | null;
       readonly user_id: CodecTypes['pg/text@1']['output'] | null;
       readonly total_price: CodecTypes['pg/float8@1']['output'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
@@ -329,7 +330,6 @@ export type FieldOutputTypes = {
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly order_id: CodecTypes['pg/text@1']['output'] | null;
       readonly menu_id: CodecTypes['pg/text@1']['output'] | null;
-      readonly food_name: CodecTypes['pg/text@1']['output'] | null;
       readonly unit_price: CodecTypes['pg/float8@1']['output'] | null;
       readonly quantity: CodecTypes['pg/int4@1']['output'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
@@ -441,6 +441,7 @@ export type FieldInputTypes = {
     };
     readonly order: {
       readonly id: CodecTypes['pg/text@1']['input'];
+      readonly order_number: CodecTypes['pg/text@1']['input'] | null;
       readonly user_id: CodecTypes['pg/text@1']['input'] | null;
       readonly total_price: CodecTypes['pg/float8@1']['input'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
@@ -451,7 +452,6 @@ export type FieldInputTypes = {
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly order_id: CodecTypes['pg/text@1']['input'] | null;
       readonly menu_id: CodecTypes['pg/text@1']['input'] | null;
-      readonly food_name: CodecTypes['pg/text@1']['input'] | null;
       readonly unit_price: CodecTypes['pg/float8@1']['input'] | null;
       readonly quantity: CodecTypes['pg/int4@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -564,6 +564,7 @@ export type StorageColumnTypes = {
     readonly order: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
       readonly id: CodecTypes['pg/text@1']['output'];
+      readonly order_number: CodecTypes['pg/text@1']['output'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
       readonly total_price: CodecTypes['pg/float8@1']['output'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
@@ -571,7 +572,6 @@ export type StorageColumnTypes = {
     };
     readonly order_item: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
-      readonly food_name: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly menu_id: CodecTypes['pg/text@1']['output'] | null;
       readonly order_id: CodecTypes['pg/text@1']['output'] | null;
@@ -686,6 +686,7 @@ export type StorageColumnInputTypes = {
     readonly order: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly id: CodecTypes['pg/text@1']['input'];
+      readonly order_number: CodecTypes['pg/text@1']['input'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
       readonly total_price: CodecTypes['pg/float8@1']['input'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -693,7 +694,6 @@ export type StorageColumnInputTypes = {
     };
     readonly order_item: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
-      readonly food_name: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly menu_id: CodecTypes['pg/text@1']['input'] | null;
       readonly order_id: CodecTypes['pg/text@1']['input'] | null;
@@ -1207,6 +1207,11 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
                 };
+                readonly order_number: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
                 readonly user_id: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
@@ -1272,11 +1277,6 @@ type ContractBase = Omit<
                   readonly nullable: true;
                 };
                 readonly menu_id: {
-                  readonly nativeType: 'text';
-                  readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
-                };
-                readonly food_name: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
@@ -2052,6 +2052,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly order_number: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly user_id: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -2108,6 +2112,7 @@ type ContractBase = Omit<
               readonly namespaceId: 'public';
               readonly fields: {
                 readonly id: { readonly column: 'id' };
+                readonly order_number: { readonly column: 'order_number' };
                 readonly user_id: { readonly column: 'user_id' };
                 readonly total_price: { readonly column: 'total_price' };
                 readonly status: { readonly column: 'status' };
@@ -2127,10 +2132,6 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly menu_id: {
-                readonly nullable: true;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
-              };
-              readonly food_name: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
@@ -2185,7 +2186,6 @@ type ContractBase = Omit<
                 readonly id: { readonly column: 'id' };
                 readonly order_id: { readonly column: 'order_id' };
                 readonly menu_id: { readonly column: 'menu_id' };
-                readonly food_name: { readonly column: 'food_name' };
                 readonly unit_price: { readonly column: 'unit_price' };
                 readonly quantity: { readonly column: 'quantity' };
                 readonly createdAt: { readonly column: 'createdAt' };
