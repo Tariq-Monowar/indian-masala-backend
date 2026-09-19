@@ -4,6 +4,7 @@ import {
   verifyOrderOtp,
   getAllOrders,
   getSingleOrder,
+  getMyOrder,
   updateOrderStatus,
   deleteOrderBulk,
 } from "./orders.controllers";
@@ -44,6 +45,18 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
       preHandler: [verifyUser("admin")],
     },
     getSingleOrder,
+  );
+
+  /*
+   * get my order
+   * {{_baseUrl}}/api/orders/my
+  */
+  fastify.get(
+    "/my",
+    {
+      preHandler: [verifyUser()],
+    },
+    getMyOrder,
   );
 
   /*

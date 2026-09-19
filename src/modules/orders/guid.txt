@@ -42,7 +42,9 @@ Response (otp sent): {
 Response: {
   {
     "success": true,
-    "message": "Order created successfully"
+    "message": "Order created successfully",
+    "id": "uuid",
+    "order_number": "0001"
   }
 }
 
@@ -50,6 +52,8 @@ Response (new customer): {
   {
     "success": true,
     "message": "Order created successfully",
+    "id": "uuid",
+    "order_number": "0001",
     "token": "jwt..."
   }
 }
@@ -81,6 +85,8 @@ Response: {
   {
     "success": true,
     "message": "Order created successfully",
+    "id": "uuid",
+    "order_number": "0001",
     "token": "jwt..."
   }
 }
@@ -119,6 +125,7 @@ note:
   - status=pending,confirmed returns those statuses (case insensitive)
   - started_date and end_date filter createdAt
   - end_date includes that full day
+  - image is menu images[0] filename
 
 Response: {
   {
@@ -133,7 +140,8 @@ Response: {
         "order": [
           {
             "name": "Butter Chicken",
-            "quantity": 2
+            "quantity": 2,
+            "image": "1710000000000-one.jpg"
           }
         ],
         "total_price": 24.5,
@@ -165,7 +173,7 @@ body: {
 note:
   - send jwt in token header
   - id is in the URL
-  - image is first menu image filename
+  - image is menu images[0] filename
 
 Response: {
   {
@@ -187,6 +195,57 @@ Response: {
       ],
       "total_price": 24.5,
       "status": "pending",
+      "createdAt": "2026-09-19T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
+get my order
+______________GET
+{{_baseUrl}}/api/orders/my
+
+header: {
+  - token: User
+}
+
+query: {
+  - id={{id}}
+  - order_number={{order_number}}
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - send id or order_number, both work
+  - customer can only see their own order
+  - image is menu images[0] filename
+  - status is pending, confirmed, preparing, completed, cancelled
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "order_number": "0001",
+      "status": "pending",
+      "customer": {
+        "name": "Tariq Monowar",
+        "phone": "01712345678",
+        "email": "tariq@example.com"
+      },
+      "orders": [
+        {
+          "name": "Samosa Chaat",
+          "quantity": 1,
+          "image": "1710000000000-one.jpg",
+          "unit_price": 52,
+          "total_price": 52
+        }
+      ],
+      "total_price": 52,
       "createdAt": "2026-09-19T10:00:00.000Z"
     }
   }

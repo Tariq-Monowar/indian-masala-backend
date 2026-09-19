@@ -165,6 +165,8 @@ export const createOrder = async (request, reply) => {
     return reply.status(201).send({
       success: true,
       message: "Order created successfully",
+      id: order.id,
+      order_number,
       ...(newToken && { token: newToken }),
     });
   } catch (error: any) {
@@ -261,6 +263,8 @@ export const verifyOrderOtp = async (request, reply) => {
     return reply.status(201).send({
       success: true,
       message: "Order created successfully",
+      id: order.id,
+      order_number,
       token,
     });
   } catch (error) {
@@ -305,7 +309,12 @@ export const getAllOrders = async (request, reply) => {
             SELECT json_agg(
               json_build_object(
                 'name', m.food_name,
-                'quantity', oi.quantity
+                'quantity', oi.quantity,
+                'image', (
+                  SELECT (array_agg(i.image ORDER BY i."createdAt" ASC))[1]
+                  FROM menu_image i
+                  WHERE i.menu_id = m.id
+                )
               )
               ORDER BY oi."createdAt" ASC
             )
@@ -432,11 +441,9 @@ export const getSingleOrder = async (request, reply) => {
                 'name', m.food_name,
                 'quantity', oi.quantity,
                 'image', (
-                  SELECT i.image
+                  SELECT (array_agg(i.image ORDER BY i."createdAt" ASC))[1]
                   FROM menu_image i
                   WHERE i.menu_id = m.id
-                  ORDER BY i."createdAt" ASC
-                  LIMIT 1
                 )
               )
               ORDER BY oi."createdAt" ASC
@@ -488,6 +495,113 @@ export const getSingleOrder = async (request, reply) => {
         orders: row.orders,
         total_price: row.total_price,
         status: row.status,
+        createdAt: row.createdAt,
+      },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getMyOrder = async (request, reply) => {
+  try {
+    const { id, order_number } = request.query;
+    const { id: userId, role } = request.user;
+    const orderId = id || "";
+    const orderNumber = order_number || "";
+
+    if (!orderId && !orderNumber) {
+      return reply.status(400).send({
+        success: false,
+        message: "id or order_number is required!",
+      });
+    }
+
+    const ownerId = role === "admin" ? "" : userId || "";
+
+    const plan = prisma.raw.sql`
+      SELECT
+        o.id,
+        o.order_number,
+        o.total_price,
+        o.status,
+        o."createdAt",
+        u.name AS customer_name,
+        u.email AS customer_email,
+        u.phone AS customer_phone,
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'name', m.food_name,
+                'quantity', oi.quantity,
+                'image', (
+                  SELECT (array_agg(i.image ORDER BY i."createdAt" ASC))[1]
+                  FROM menu_image i
+                  WHERE i.menu_id = m.id
+                ),
+                'unit_price', oi.unit_price,
+                'total_price', oi.unit_price * oi.quantity
+              )
+              ORDER BY oi."createdAt" ASC
+            )
+            FROM order_item oi
+            LEFT JOIN menu m ON m.id = oi.menu_id
+            WHERE oi.order_id = o.id
+          ),
+          '[]'::json
+        ) AS orders
+      FROM "order" o
+      LEFT JOIN users u ON u.id = o.user_id
+      WHERE
+        (${orderId} = '' OR o.id = ${orderId})
+        AND (${orderNumber} = '' OR o.order_number = ${orderNumber})
+        AND (
+          ${ownerId} = ''
+          OR o.user_id = ${ownerId}
+        )
+      LIMIT 1
+    `
+      .returnsRow({
+        id: "pg/text@1",
+        order_number: { codecId: "pg/text@1", nullable: true },
+        total_price: { codecId: "pg/float8@1", nullable: true },
+        status: { codecId: "pg/text@1", nullable: true },
+        createdAt: "pg/timestamptz-string@1",
+        customer_name: { codecId: "pg/text@1", nullable: true },
+        customer_email: { codecId: "pg/text@1", nullable: true },
+        customer_phone: { codecId: "pg/text@1", nullable: true },
+        orders: "pg/json@1",
+      })
+      .build();
+
+    const result = await prisma.runtime().query(plan);
+    const list = Array.isArray(result) ? result : [];
+    const row = list[0];
+
+    if (!row) {
+      return reply
+        .status(404)
+        .send({ success: false, message: "Order not found!" });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      data: {
+        id: row.id,
+        order_number: row.order_number,
+        status: row.status,
+        customer: {
+          name: row.customer_name,
+          phone: row.customer_phone,
+          email: row.customer_email,
+        },
+        orders: row.orders,
+        total_price: row.total_price,
         createdAt: row.createdAt,
       },
     });
