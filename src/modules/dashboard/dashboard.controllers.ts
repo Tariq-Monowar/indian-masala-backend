@@ -18,18 +18,18 @@ export const getDashboardStats = async (request, reply) => {
     }
 
     const now = new Date();
-    let currentStart;
-    let currentEnd = now;
-    let previousStart;
-    let previousEnd;
+    let currentStart = new Date(now);
+    let currentEnd = new Date(now);
+    let previousStart = new Date(now);
+    let previousEnd = new Date(now);
     let compare_label = "vs yesterday";
 
     if (selected === "today") {
       currentStart = new Date(now);
-      currentStart.setHours(0, 0, 0, 0);
+      currentStart.setUTCHours(0, 0, 0, 0);
 
       previousStart = new Date(currentStart);
-      previousStart.setDate(previousStart.getDate() - 1);
+      previousStart.setUTCDate(previousStart.getUTCDate() - 1);
 
       previousEnd = new Date(currentStart);
       compare_label = "vs yesterday";
@@ -37,27 +37,31 @@ export const getDashboardStats = async (request, reply) => {
 
     if (selected === "7days") {
       currentStart = new Date(now);
-      currentStart.setDate(currentStart.getDate() - 7);
+      currentStart.setUTCDate(currentStart.getUTCDate() - 7);
 
       previousEnd = new Date(currentStart);
       previousStart = new Date(currentStart);
-      previousStart.setDate(previousStart.getDate() - 7);
+      previousStart.setUTCDate(previousStart.getUTCDate() - 7);
       compare_label = "vs previous 7 days";
     }
 
     if (selected === "month") {
-      currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      previousEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+      currentStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
+      previousStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+      );
+      previousEnd = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
       compare_label = "vs last month";
     }
 
     if (selected === "year") {
-      currentStart = new Date(now.getFullYear(), 0, 1);
-
-      previousStart = new Date(now.getFullYear() - 1, 0, 1);
-      previousEnd = new Date(now.getFullYear(), 0, 1);
+      currentStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+      previousStart = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1));
+      previousEnd = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
       compare_label = "vs last year";
     }
 
@@ -111,46 +115,40 @@ export const getDashboardStats = async (request, reply) => {
 
     const result = await prisma.runtime().query(plan);
     const list = Array.isArray(result) ? result : [];
-    const row = list[0] || {
-      orders_current: 0,
-      orders_previous: 0,
-      reservations_current: 0,
-      reservations_previous: 0,
-      catering_current: 0,
-      catering_previous: 0,
-    };
+    const row = list[0] || {};
+
+    const ordersCurrent = Number(row.orders_current || 0);
+    const ordersPrevious = Number(row.orders_previous || 0);
+    const reservationsCurrent = Number(row.reservations_current || 0);
+    const reservationsPrevious = Number(row.reservations_previous || 0);
+    const cateringCurrent = Number(row.catering_current || 0);
+    const cateringPrevious = Number(row.catering_previous || 0);
 
     const ordersChange =
-      row.orders_previous === 0
-        ? row.orders_current > 0
+      ordersPrevious === 0
+        ? ordersCurrent > 0
           ? 100
           : 0
-        : Math.round(
-            ((row.orders_current - row.orders_previous) /
-              row.orders_previous) *
-              100,
-          );
+        : Math.round(((ordersCurrent - ordersPrevious) / ordersPrevious) * 100);
 
     const reservationsChange =
-      row.reservations_previous === 0
-        ? row.reservations_current > 0
+      reservationsPrevious === 0
+        ? reservationsCurrent > 0
           ? 100
           : 0
         : Math.round(
-            ((row.reservations_current - row.reservations_previous) /
-              row.reservations_previous) *
+            ((reservationsCurrent - reservationsPrevious) /
+              reservationsPrevious) *
               100,
           );
 
     const cateringChange =
-      row.catering_previous === 0
-        ? row.catering_current > 0
+      cateringPrevious === 0
+        ? cateringCurrent > 0
           ? 100
           : 0
         : Math.round(
-            ((row.catering_current - row.catering_previous) /
-              row.catering_previous) *
-              100,
+            ((cateringCurrent - cateringPrevious) / cateringPrevious) * 100,
           );
 
     return reply.status(200).send({
@@ -159,13 +157,13 @@ export const getDashboardStats = async (request, reply) => {
         period: selected,
         compare_label,
         orders: {
-          count: row.orders_current,
+          count: ordersCurrent,
           change_percent: Math.abs(ordersChange),
           direction:
             ordersChange > 0 ? "up" : ordersChange < 0 ? "down" : "flat",
         },
         reservations: {
-          count: row.reservations_current,
+          count: reservationsCurrent,
           change_percent: Math.abs(reservationsChange),
           direction:
             reservationsChange > 0
@@ -175,7 +173,7 @@ export const getDashboardStats = async (request, reply) => {
                 : "flat",
         },
         catering: {
-          count: row.catering_current,
+          count: cateringCurrent,
           change_percent: Math.abs(cateringChange),
           direction:
             cateringChange > 0 ? "up" : cateringChange < 0 ? "down" : "flat",
@@ -194,20 +192,35 @@ export const getDashboardStats = async (request, reply) => {
 export const getOrdersThisWeek = async (request, reply) => {
   try {
     const now = new Date();
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - 6);
-
-    const end = new Date(now);
-    end.setDate(end.getDate() + 1);
-    end.setHours(0, 0, 0, 0);
+    const start = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() - 6,
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+    const end = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
 
     const startIso = start.toISOString();
     const endIso = end.toISOString();
 
     const plan = prisma.raw.sql`
       SELECT
-        (o."createdAt" AT TIME ZONE 'UTC')::date::text AS day,
+        to_char((o."createdAt" AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS day,
         COUNT(*)::int AS count
       FROM "order" o
       WHERE o."createdAt" >= ${startIso}::timestamptz
@@ -226,7 +239,7 @@ export const getOrdersThisWeek = async (request, reply) => {
 
     const countByDay: any = {};
     for (const row of list) {
-      countByDay[row.day] = row.count;
+      countByDay[row.day] = Number(row.count || 0);
     }
 
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -235,7 +248,7 @@ export const getOrdersThisWeek = async (request, reply) => {
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(start);
-      date.setDate(start.getDate() + i);
+      date.setUTCDate(start.getUTCDate() + i);
 
       const key = date.toISOString().slice(0, 10);
       const count = countByDay[key] || 0;

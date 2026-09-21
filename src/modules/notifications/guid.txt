@@ -1,4 +1,54 @@
 =================================
+socket notification
+______________SOCKET
+{{_baseUrl}}
+
+connect: {
+  - io({{_baseUrl}})
+}
+
+emit: {
+  - join: { id: "{{user.id}}", role: "admin" }
+}
+
+listen: {
+  - notification
+}
+
+note:
+  - connect after admin login
+  - emit join with logged in user id and role admin
+  - then listen notification
+  - payload is one notification, same as get all item
+  - add it to the top of the list
+  - unread count + 1
+  - type is new_order, reservation, catering, contact_us
+  - object_id is the related row id
+
+example: {
+  import { io } from "socket.io-client"
+
+  const socket = io("{{_baseUrl}}")
+  socket.emit("join", { id: user.id, role: "admin" })
+  socket.on("notification", (data) => {
+    // prepend data to list
+    // unread count + 1
+  })
+}
+
+Response: {
+  {
+    "id": "uuid",
+    "message": "New order #0001 for 24.5 with 2 item(s).",
+    "is_read": false,
+    "user_id": null,
+    "object_id": "uuid",
+    "type": "new_order",
+    "createdAt": "2026-09-19T10:00:00.000Z"
+  }
+}
+
+=================================
 get all notifications
 ______________GET
 {{_baseUrl}}/api/notifications/get

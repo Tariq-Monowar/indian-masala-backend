@@ -12,37 +12,25 @@ export default async function cateringRoutes(fastify: FastifyInstance) {
   /*
    * create catering
    * {{_baseUrl}}/api/catering/create
-  */
+   */
   fastify.post("/create", createCatering);
 
   /*
    * get all catering
    * {{_baseUrl}}/api/catering/get
-  */
-  fastify.get(
-    "/get",
-    {
-      preHandler: [verifyUser("admin")],
-    },
-    getAllCatering,
-  );
+   */
+  fastify.get("/get", getAllCatering);
 
   /*
    * get single catering
    * {{_baseUrl}}/api/catering/get/:id
-  */
-  fastify.get(
-    "/get/:id",
-    {
-      preHandler: [verifyUser("admin")],
-    },
-    getSingleCatering,
-  );
+   */
+  fastify.get("/get/:id", getSingleCatering);
 
   /*
    * update catering status
    * {{_baseUrl}}/api/catering/update
-  */
+   */
   fastify.patch(
     "/update",
     {
@@ -54,7 +42,7 @@ export default async function cateringRoutes(fastify: FastifyInstance) {
   /*
    * delete catering bulk
    * {{_baseUrl}}/api/catering/bulk
-  */
+   */
   fastify.delete(
     "/bulk",
     {
