@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'a4c7c041e86069aa06db260e30a050ba580bd282f843d534a0d8bbc2bc73ba78'>;
+  StorageHashBase<'4f510e8696dce07220473465696231e46f99872e1161e0a0ac10dbfe17631cdb'>;
 export type ExecutionHash =
   ExecutionHashBase<'72cd0e075fb67463932d234a1d3431c94fb57ecd2bd1b63384e5323e56a70ad7'>;
 export type ProfileHash =
@@ -320,6 +320,9 @@ export type FieldOutputTypes = {
     readonly order: {
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly order_number: CodecTypes['pg/text@1']['output'] | null;
+      readonly name: CodecTypes['pg/text@1']['output'] | null;
+      readonly email: CodecTypes['pg/text@1']['output'] | null;
+      readonly phone: CodecTypes['pg/text@1']['output'] | null;
       readonly user_id: CodecTypes['pg/text@1']['output'] | null;
       readonly total_price: CodecTypes['pg/float8@1']['output'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
@@ -442,6 +445,9 @@ export type FieldInputTypes = {
     readonly order: {
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly order_number: CodecTypes['pg/text@1']['input'] | null;
+      readonly name: CodecTypes['pg/text@1']['input'] | null;
+      readonly email: CodecTypes['pg/text@1']['input'] | null;
+      readonly phone: CodecTypes['pg/text@1']['input'] | null;
       readonly user_id: CodecTypes['pg/text@1']['input'] | null;
       readonly total_price: CodecTypes['pg/float8@1']['input'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
@@ -563,8 +569,11 @@ export type StorageColumnTypes = {
     };
     readonly order: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
+      readonly email: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/text@1']['output'];
+      readonly name: CodecTypes['pg/text@1']['output'] | null;
       readonly order_number: CodecTypes['pg/text@1']['output'] | null;
+      readonly phone: CodecTypes['pg/text@1']['output'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
       readonly total_price: CodecTypes['pg/float8@1']['output'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
@@ -685,8 +694,11 @@ export type StorageColumnInputTypes = {
     };
     readonly order: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
+      readonly email: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/text@1']['input'];
+      readonly name: CodecTypes['pg/text@1']['input'] | null;
       readonly order_number: CodecTypes['pg/text@1']['input'] | null;
+      readonly phone: CodecTypes['pg/text@1']['input'] | null;
       readonly status: 'pending' | 'confirmed' | 'preparing' | 'completed' | 'cancelled' | null;
       readonly total_price: CodecTypes['pg/float8@1']['input'] | null;
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -1208,6 +1220,21 @@ type ContractBase = Omit<
                   readonly nullable: false;
                 };
                 readonly order_number: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly name: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly email: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly phone: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: true;
@@ -2056,6 +2083,18 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly name: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly email: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly phone: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly user_id: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -2113,6 +2152,9 @@ type ContractBase = Omit<
               readonly fields: {
                 readonly id: { readonly column: 'id' };
                 readonly order_number: { readonly column: 'order_number' };
+                readonly name: { readonly column: 'name' };
+                readonly email: { readonly column: 'email' };
+                readonly phone: { readonly column: 'phone' };
                 readonly user_id: { readonly column: 'user_id' };
                 readonly total_price: { readonly column: 'total_price' };
                 readonly status: { readonly column: 'status' };

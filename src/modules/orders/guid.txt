@@ -4,7 +4,6 @@ ______________POST
 {{_baseUrl}}/api/orders/create
 
 header: {
-  - token: User (optional)
 }
 
 query: {
@@ -23,62 +22,11 @@ body: {
 }
 
 note:
-  - with token: only order_item required, order created now (no otp)
-  - first time (new email, no token): create customer + token + order (no otp)
-  - second time (email already exists, no token): save food in redis 10m, send otp 10m
-  - then call verify-otp with email + otp to create order
+  - public route, no token / no user / no otp
+  - name, email, phone saved on the order itself
   - order_item id is menu id
   - system sets unit_price and total_price
   - system sets order_number as 0001, 0002, 0003, ...
-
-Response (otp sent): {
-  {
-    "success": true,
-    "message": "OTP sent to your email",
-    "otp": null
-  }
-}
-
-Response: {
-  {
-    "success": true,
-    "message": "Order created successfully",
-    "id": "uuid",
-    "order_number": "0001"
-  }
-}
-
-Response (new customer): {
-  {
-    "success": true,
-    "message": "Order created successfully",
-    "id": "uuid",
-    "order_number": "0001",
-    "token": "jwt..."
-  }
-}
-
-=================================
-verify order otp
-______________POST
-{{_baseUrl}}/api/orders/verify-otp
-
-header: {
-}
-
-query: {
-}
-
-body: {
-  - email: string
-  - otp: string
-}
-
-note:
-  - call after create order sent otp
-  - food + otp live in redis for 10 minutes
-  - after match otp, order is created
-  - returns jwt token for the customer
   - notifies all admin
 
 Response: {
@@ -86,8 +34,7 @@ Response: {
     "success": true,
     "message": "Order created successfully",
     "id": "uuid",
-    "order_number": "0001",
-    "token": "jwt..."
+    "order_number": "0001"
   }
 }
 
@@ -158,21 +105,23 @@ Response: {
 =================================
 get single order
 ______________GET
-{{_baseUrl}}/api/orders/get/:id
+{{_baseUrl}}/api/orders/single
 
 header: {
-  - token: Admin
 }
 
 query: {
+  - id={{id}}
+  - order_number={{order_number}}
 }
 
 body: {
 }
 
 note:
-  - send jwt in token header
-  - id is in the URL
+  - public route, no token needed
+  - send id or order_number in query
+  - order_number wins if both are sent
   - image is menu images[0] filename
 
 Response: {
@@ -195,57 +144,6 @@ Response: {
       ],
       "total_price": 24.5,
       "status": "pending",
-      "createdAt": "2026-09-19T10:00:00.000Z"
-    }
-  }
-}
-
-=================================
-get my order
-______________GET
-{{_baseUrl}}/api/orders/my
-
-header: {
-  - token: User
-}
-
-query: {
-  - id={{id}}
-  - order_number={{order_number}}
-}
-
-body: {
-}
-
-note:
-  - send jwt in token header
-  - send id or order_number, both work
-  - customer can only see their own order
-  - image is menu images[0] filename
-  - status is pending, confirmed, preparing, completed, cancelled
-
-Response: {
-  {
-    "success": true,
-    "data": {
-      "id": "uuid",
-      "order_number": "0001",
-      "status": "pending",
-      "customer": {
-        "name": "Tariq Monowar",
-        "phone": "01712345678",
-        "email": "tariq@example.com"
-      },
-      "orders": [
-        {
-          "name": "Samosa Chaat",
-          "quantity": 1,
-          "image": "1710000000000-one.jpg",
-          "unit_price": 52,
-          "total_price": 52
-        }
-      ],
-      "total_price": 52,
       "createdAt": "2026-09-19T10:00:00.000Z"
     }
   }

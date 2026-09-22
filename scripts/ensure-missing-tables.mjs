@@ -59,6 +59,9 @@ if (!existing.has("order")) {
     CREATE TABLE IF NOT EXISTS "order" (
       id text PRIMARY KEY,
       order_number text,
+      name text,
+      email text,
+      phone text,
       user_id text REFERENCES users(id) ON DELETE CASCADE,
       total_price double precision,
       status text,
@@ -72,11 +75,11 @@ if (!existing.has("order")) {
   console.log("created order");
 }
 
-if (!(await hasColumn("order", "order_number"))) {
-  await c.query(
-    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS order_number text`,
-  );
-  console.log("added order.order_number");
+for (const col of ["order_number", "name", "email", "phone"]) {
+  if (!(await hasColumn("order", col))) {
+    await c.query(`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "${col}" text`);
+    console.log(`added order.${col}`);
+  }
 }
 
 if (!existing.has("order_item")) {

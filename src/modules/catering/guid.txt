@@ -54,7 +54,6 @@ ______________GET
 {{_baseUrl}}/api/catering/get
 
 header: {
-  - token: Admin
 }
 
 query: {
@@ -71,7 +70,7 @@ body: {
 }
 
 note:
-  - send jwt in token header
+  - public route, no token needed
   - cursor is the last catering id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
@@ -114,7 +113,6 @@ ______________GET
 {{_baseUrl}}/api/catering/get/:id
 
 header: {
-  - token: Admin
 }
 
 query: {
@@ -124,7 +122,7 @@ body: {
 }
 
 note:
-  - send jwt in token header
+  - public route, no token needed
   - id is in the URL
 
 Response: {

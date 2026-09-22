@@ -1006,6 +1006,13 @@
                   "kind": "scalar"
                 }
               },
+              "email": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -1013,7 +1020,21 @@
                   "kind": "scalar"
                 }
               },
+              "name": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "order_number": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "phone": {
                 "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
@@ -1092,11 +1113,20 @@
                 "createdAt": {
                   "column": "createdAt"
                 },
+                "email": {
+                  "column": "email"
+                },
                 "id": {
                   "column": "id"
                 },
+                "name": {
+                  "column": "name"
+                },
                 "order_number": {
                   "column": "order_number"
+                },
+                "phone": {
+                  "column": "phone"
                 },
                 "status": {
                   "column": "status"
@@ -2090,12 +2120,27 @@
                   "nativeType": "timestamptz",
                   "nullable": false
                 },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "id": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
                 },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "order_number": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "phone": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": true
@@ -2494,7 +2539,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "a4c7c041e86069aa06db260e30a050ba580bd282f843d534a0d8bbc2bc73ba78"
+    "storageHash": "4f510e8696dce07220473465696231e46f99872e1161e0a0ac10dbfe17631cdb"
   },
   "execution": {
     "executionHash": "72cd0e075fb67463932d234a1d3431c94fb57ecd2bd1b63384e5323e56a70ad7",

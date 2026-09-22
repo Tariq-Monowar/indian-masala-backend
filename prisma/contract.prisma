@@ -107,6 +107,10 @@ model order {
   //0001, 0002, 0003, ...
   order_number String?
 
+  name  String?
+  email String?
+  phone String?
+
   user_id String?
   user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
 

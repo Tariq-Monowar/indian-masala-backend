@@ -1,73 +1,37 @@
-import jwt from "jsonwebtoken";
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
-import { orderOtpTemplate } from "../../notifications/email/templates/order.otp";
 
 const nextOrderNumber = async () => {
   const rows = await (db as any).order.select("id").all();
   return String((rows?.length || 0) + 1).padStart(4, "0");
 };
 
-
-
 export const createOrder = async (request, reply) => {
   try {
     const { name, email, phone, order_item } = request.body;
-    const headerToken = request.headers.token || request.headers.authorization;
+
+    if (!name) {
+      return reply
+        .status(400)
+        .send({ success: false, message: "name is required!" });
+    }
+
+    if (!email) {
+      return reply
+        .status(400)
+        .send({ success: false, message: "email is required!" });
+    }
+
+    if (!phone) {
+      return reply
+        .status(400)
+        .send({ success: false, message: "phone is required!" });
+    }
 
     if (!order_item?.length) {
       return reply
         .status(400)
         .send({ success: false, message: "order_item is required!" });
-    }
-
-    let user: any = null;
-    let newToken: string | null = null;
-    let needsOtp = false;
-
-    if (headerToken) {
-      const payload = jwt.verify(
-        headerToken as string,
-        process.env.JWT_SECRET as string,
-      ) as { id: string };
-
-      user = await db.users.where({ id: payload.id }).first();
-      if (!user) {
-        return reply
-          .status(401)
-          .send({ success: false, message: "Invalid token" });
-      }
-    } else {
-      if (!name || !email || !phone) {
-        return reply.status(400).send({
-          success: false,
-          message: "name, email and phone are required!",
-        });
-      }
-
-      user = await db.users.where({ email }).first();
-
-      if (user) {
-        needsOtp = true;
-      } else {
-        user = await db.users.create({
-          name,
-          email,
-          phone,
-          role: "customer",
-        });
-
-        newToken = jwt.sign(
-          { id: user.id, email: user.email, role: user.role },
-          process.env.JWT_SECRET as string,
-        );
-      }
-    }
-
-    if (!user) {
-      return reply
-        .status(401)
-        .send({ success: false, message: "User not found" });
     }
 
     let total_price = 0;
@@ -102,47 +66,12 @@ export const createOrder = async (request, reply) => {
       });
     }
 
-    if (needsOtp) {
-      const code = Math.floor(1000 + Math.random() * 9000).toString();
-      const expiration = Date.now() + 10 * 60 * 1000;
-      const redis = request.server.redis;
-      const key = `order-pending:${email}`;
-
-      await redis
-        .multi()
-        .set(
-          key,
-          JSON.stringify({
-            email,
-            user_id: user.id,
-            total_price,
-            lines,
-            otp: code,
-            expiration,
-          }),
-        )
-        .expire(key, 10 * 60)
-        .exec();
-
-      void notify({
-        email: {
-          to: email,
-          subject: "Order Verification Code",
-          html: orderOtpTemplate(code),
-        },
-      });
-
-      return reply.status(200).send({
-        success: true,
-        message: "OTP sent to your email",
-        otp: process.env.NODE_ENV === "development" ? code : null,
-      });
-    }
-
     const order_number = await nextOrderNumber();
 
     const order = await (db as any).order.create({
-      user_id: user.id,
+      name,
+      email,
+      phone,
       order_number,
       total_price,
       status: "pending",
@@ -155,7 +84,7 @@ export const createOrder = async (request, reply) => {
     void notify({
       io: request.server.io,
       inApp: {
-        message: `New order #${order_number} for ${total_price} with ${lines.length} item(s).`,
+        message: `New order #${order_number} from ${name} for ${total_price} with ${lines.length} item(s).`,
         type: "new_order",
         object_id: order.id,
         role: "admin",
@@ -167,105 +96,6 @@ export const createOrder = async (request, reply) => {
       message: "Order created successfully",
       id: order.id,
       order_number,
-      ...(newToken && { token: newToken }),
-    });
-  } catch (error: any) {
-    if (
-      error?.name === "JsonWebTokenError" ||
-      error?.name === "TokenExpiredError"
-    ) {
-      return reply
-        .status(401)
-        .send({ success: false, message: "Invalid token" });
-    }
-
-    request.log.error(error);
-    return reply
-      .status(500)
-      .send({ success: false, message: "Internal server error" });
-  }
-};
-
-export const verifyOrderOtp = async (request, reply) => {
-  try {
-    const { email, otp } = request.body;
-
-    if (!email || !otp) {
-      return reply.status(400).send({
-        success: false,
-        message: "email and otp are required!",
-      });
-    }
-
-    const redis = request.server.redis;
-    const key = `order-pending:${email}`;
-    const raw = await redis.get(key);
-
-    if (!raw) {
-      return reply.status(400).send({
-        success: false,
-        message: "OTP not found or expired!",
-      });
-    }
-
-    const pending = JSON.parse(raw);
-
-    if (pending.otp !== otp) {
-      return reply
-        .status(400)
-        .send({ success: false, message: "Invalid OTP!" });
-    }
-
-    if (Date.now() > pending.expiration) {
-      await redis.del(key);
-      return reply
-        .status(400)
-        .send({ success: false, message: "OTP expired!" });
-    }
-
-    const order_number = await nextOrderNumber();
-
-    const order = await (db as any).order.create({
-      user_id: pending.user_id,
-      order_number,
-      total_price: pending.total_price,
-      status: "pending",
-    });
-
-    for (const line of pending.lines) {
-      await (db as any).order_item.create({ order_id: order.id, ...line });
-    }
-
-    await redis.del(key);
-
-    const user = await db.users.where({ id: pending.user_id }).first();
-    if (!user) {
-      return reply
-        .status(404)
-        .send({ success: false, message: "User not found" });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET as string,
-    );
-
-    void notify({
-      io: request.server.io,
-      inApp: {
-        message: `New order #${order_number} for ${pending.total_price} with ${pending.lines.length} item(s).`,
-        type: "new_order",
-        object_id: order.id,
-        role: "admin",
-      },
-    });
-
-    return reply.status(201).send({
-      success: true,
-      message: "Order created successfully",
-      id: order.id,
-      order_number,
-      token,
     });
   } catch (error) {
     request.log.error(error);
@@ -282,9 +112,7 @@ export const getAllOrders = async (request, reply) => {
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
     const searchPattern = search ? "%" + search.split(" ").join("%") + "%" : "";
-    const digitSearch = search
-      ? String(search).replace(/\D/g, "")
-      : "";
+    const digitSearch = search ? String(search).replace(/\D/g, "") : "";
     const digitPattern = digitSearch ? "%" + digitSearch + "%" : "";
     const statusCsv = status || "";
     const cursorId = cursor || "";
@@ -298,9 +126,9 @@ export const getAllOrders = async (request, reply) => {
       SELECT
         o.id,
         o.order_number,
-        u.name,
-        u.email,
-        u.phone,
+        COALESCE(o.name, u.name) AS name,
+        COALESCE(o.email, u.email) AS email,
+        COALESCE(o.phone, u.phone) AS phone,
         o.total_price,
         o.status,
         o."createdAt",
@@ -333,10 +161,10 @@ export const getAllOrders = async (request, reply) => {
             COALESCE(o.id, '') || ' ' ||
             COALESCE(o.order_number, '') || ' ' ||
             COALESCE(ltrim(o.order_number, '0'), '') || ' ' ||
-            COALESCE(u.name, '') || ' ' ||
-            COALESCE(u.email, '') || ' ' ||
-            COALESCE(u.phone, '') || ' ' ||
-            regexp_replace(COALESCE(u.phone, ''), '[^0-9]', '', 'g') || ' ' ||
+            COALESCE(o.name, u.name, '') || ' ' ||
+            COALESCE(o.email, u.email, '') || ' ' ||
+            COALESCE(o.phone, u.phone, '') || ' ' ||
+            regexp_replace(COALESCE(o.phone, u.phone, ''), '[^0-9]', '', 'g') || ' ' ||
             COALESCE(o.status, '') || ' ' ||
             COALESCE(o.total_price::text, '') || ' ' ||
             COALESCE(
@@ -356,7 +184,7 @@ export const getAllOrders = async (request, reply) => {
           ) ILIKE ${searchPattern}
           OR (
             ${digitPattern} <> ''
-            AND regexp_replace(COALESCE(u.phone, ''), '[^0-9]', '', 'g')
+            AND regexp_replace(COALESCE(o.phone, u.phone, ''), '[^0-9]', '', 'g')
               LIKE ${digitPattern}
           )
         )
@@ -416,12 +244,15 @@ export const getAllOrders = async (request, reply) => {
 
 export const getSingleOrder = async (request, reply) => {
   try {
-    const { id } = request.params;
+    const { id, order_number } = request.query;
+    const orderId = id || "";
+    const orderNumber = order_number || "";
 
-    if (!id) {
-      return reply
-        .status(400)
-        .send({ success: false, message: "id is required!" });
+    if (!orderId && !orderNumber) {
+      return reply.status(400).send({
+        success: false,
+        message: "id or order_number is required!",
+      });
     }
 
     const plan = prisma.raw.sql`
@@ -431,9 +262,9 @@ export const getSingleOrder = async (request, reply) => {
         o.total_price,
         o.status,
         o."createdAt",
-        u.name AS customer_name,
-        u.email AS customer_email,
-        u.phone AS customer_phone,
+        COALESCE(o.name, u.name) AS customer_name,
+        COALESCE(o.email, u.email) AS customer_email,
+        COALESCE(o.phone, u.phone) AS customer_phone,
         COALESCE(
           (
             SELECT json_agg(
@@ -456,114 +287,9 @@ export const getSingleOrder = async (request, reply) => {
         ) AS orders
       FROM "order" o
       LEFT JOIN users u ON u.id = o.user_id
-      WHERE o.id = ${id}
-      LIMIT 1
-    `
-      .returnsRow({
-        id: "pg/text@1",
-        order_number: { codecId: "pg/text@1", nullable: true },
-        total_price: { codecId: "pg/float8@1", nullable: true },
-        status: { codecId: "pg/text@1", nullable: true },
-        createdAt: "pg/timestamptz-string@1",
-        customer_name: { codecId: "pg/text@1", nullable: true },
-        customer_email: { codecId: "pg/text@1", nullable: true },
-        customer_phone: { codecId: "pg/text@1", nullable: true },
-        orders: "pg/json@1",
-      })
-      .build();
-
-    const result = await prisma.runtime().query(plan);
-    const list = Array.isArray(result) ? result : [];
-    const row = list[0];
-
-    if (!row) {
-      return reply
-        .status(404)
-        .send({ success: false, message: "Order not found!" });
-    }
-
-    return reply.status(200).send({
-      success: true,
-      data: {
-        id: row.id,
-        order_number: row.order_number,
-        customer: {
-          name: row.customer_name,
-          email: row.customer_email,
-          phone: row.customer_phone,
-        },
-        orders: row.orders,
-        total_price: row.total_price,
-        status: row.status,
-        createdAt: row.createdAt,
-      },
-    });
-  } catch (error) {
-    request.log.error(error);
-    return reply.status(500).send({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-export const getMyOrder = async (request, reply) => {
-  try {
-    const { id, order_number } = request.query;
-    const { id: userId, role } = request.user;
-    const orderId = id || "";
-    const orderNumber = order_number || "";
-
-    if (!orderId && !orderNumber) {
-      return reply.status(400).send({
-        success: false,
-        message: "id or order_number is required!",
-      });
-    }
-
-    const ownerId = role === "admin" ? "" : userId || "";
-
-    const plan = prisma.raw.sql`
-      SELECT
-        o.id,
-        o.order_number,
-        o.total_price,
-        o.status,
-        o."createdAt",
-        u.name AS customer_name,
-        u.email AS customer_email,
-        u.phone AS customer_phone,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'name', m.food_name,
-                'quantity', oi.quantity,
-                'image', (
-                  SELECT (array_agg(i.image ORDER BY i."createdAt" ASC))[1]
-                  FROM menu_image i
-                  WHERE i.menu_id = m.id
-                ),
-                'unit_price', oi.unit_price,
-                'total_price', oi.unit_price * oi.quantity
-              )
-              ORDER BY oi."createdAt" ASC
-            )
-            FROM order_item oi
-            LEFT JOIN menu m ON m.id = oi.menu_id
-            WHERE oi.order_id = o.id
-          ),
-          '[]'::json
-        ) AS orders
-      FROM "order" o
-      LEFT JOIN users u ON u.id = o.user_id
       WHERE
-        (${orderId} = '' OR o.id = ${orderId})
-        AND (${orderNumber} = '' OR o.order_number = ${orderNumber})
-        AND (
-          ${ownerId} = ''
-          OR o.user_id = ${ownerId}
-        )
+        (${orderNumber} <> '' AND o.order_number = ${orderNumber})
+        OR (${orderNumber} = '' AND o.id = ${orderId})
       LIMIT 1
     `
       .returnsRow({
@@ -594,14 +320,14 @@ export const getMyOrder = async (request, reply) => {
       data: {
         id: row.id,
         order_number: row.order_number,
-        status: row.status,
         customer: {
           name: row.customer_name,
-          phone: row.customer_phone,
           email: row.customer_email,
+          phone: row.customer_phone,
         },
         orders: row.orders,
         total_price: row.total_price,
+        status: row.status,
         createdAt: row.createdAt,
       },
     });
