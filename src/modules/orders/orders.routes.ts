@@ -35,18 +35,6 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
   fastify.get("/single", getSingleOrder);
 
   /*
-   * get my order
-   * {{_baseUrl}}/api/orders/my
-   */
-  fastify.get(
-    "/my",
-    {
-      preHandler: [verifyUser("customer")],
-    },
-    getAllOrders,
-  );
-
-  /*
    * get order status
    * {{_baseUrl}}/api/orders/status
    */
