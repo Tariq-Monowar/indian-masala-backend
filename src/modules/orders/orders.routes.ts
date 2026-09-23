@@ -38,7 +38,13 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
    * get my order
    * {{_baseUrl}}/api/orders/my
    */
-  fastify.get("/my", getSingleOrder);
+  fastify.get(
+    "/my",
+    {
+      preHandler: [verifyUser("customer")],
+    },
+    getAllOrders,
+  );
 
   /*
    * get order status

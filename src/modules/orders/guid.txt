@@ -56,6 +56,7 @@ query: {
   - limit={{limit}}
   - search={{search}}
   - email={{email}}
+  - order_number={{order_number}}
   - status={{status,status}}
   - started_date={{YYYY-MM-DD}}
   - end_date={{YYYY-MM-DD}}
@@ -75,6 +76,7 @@ note:
   - do not send cursor on the first page
   - object_id pins that row first, then other rows
   - email={{}} returns only that customer's orders (order.email, case insensitive)
+  - order_number={{}} returns only that order number
   - response includes that customer data: name, email, phone
   - strong search: order id, order_number (0001 or 1), name, email, phone (digits too), status, total_price, food name, quantity
   - spaces in search are flexible (tariq chicken matches)
@@ -147,43 +149,54 @@ ______________GET
 {{_baseUrl}}/api/orders/my
 
 header: {
+  - token: Customer
 }
 
 query: {
-  - id={{id}}
+  - cursor={{id}}
+  - limit={{limit}}
+  - search={{search}}
   - order_number={{order_number}}
+  - status={{status,status}}
+  - started_date={{YYYY-MM-DD}}
+  - end_date={{YYYY-MM-DD}}
+  - object_id={{id}}
 }
 
 body: {
 }
 
 note:
-  - same as /api/orders/single
-  - public route, no token needed
-  - send id or order_number in query
-  - order_number wins if both are sent
+  - same handler as get all orders
+  - customer token required
+  - email comes from token, only that customer's orders
+  - optional order_number filters one order
+  - response shape same as /api/orders/get
 
 Response: {
   {
     "success": true,
-    "data": {
-      "id": "uuid",
-      "order_number": "0001",
-      "customer": {
+    "data": [
+      {
+        "id": "uuid",
+        "order_number": "0001",
         "name": "Tariq Monowar",
         "email": "tariq@example.com",
-        "phone": "01712345678"
-      },
-      "orders": [
-        {
-          "name": "Butter Chicken",
-          "quantity": 2,
-          "image": "1710000000000-one.jpg"
-        }
-      ],
-      "total_price": 24.5,
-      "status": "pending",
-      "createdAt": "2026-09-19T10:00:00.000Z"
+        "phone": "01712345678",
+        "order": [
+          {
+            "name": "Butter Chicken",
+            "quantity": 2,
+            "image": "1710000000000-one.jpg"
+          }
+        ],
+        "total_price": 24.5,
+        "status": "pending",
+        "createdAt": "2026-09-19T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "hasMore": false
     }
   }
 }

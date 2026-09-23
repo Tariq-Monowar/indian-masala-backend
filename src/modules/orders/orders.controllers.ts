@@ -128,6 +128,7 @@ export const getAllOrders = async (request, reply) => {
       end_date,
       object_id,
       email,
+      order_number,
     } = request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
@@ -137,6 +138,7 @@ export const getAllOrders = async (request, reply) => {
     const statusCsv = status || "";
     const cursorId = cursor || "";
     const pinnedId = object_id || "";
+    const orderNumberFilter = order_number || "";
     const tokenUser = request.user || {};
     const emailFilter =
       tokenUser.role === "customer" ? tokenUser.email || "" : email || "";
@@ -228,6 +230,10 @@ export const getAllOrders = async (request, reply) => {
         AND (
           ${emailFilter} = ''
           OR lower(COALESCE(o.email, u.email, '')) = lower(${emailFilter})
+        )
+        AND (
+          ${orderNumberFilter} = ''
+          OR o.order_number = ${orderNumberFilter}
         )
         AND (${useStart} = 0 OR o."createdAt" >= ${startDate}::date)
         AND (${useEnd} = 0 OR o."createdAt" < (${endDate}::date + interval '1 day'))
