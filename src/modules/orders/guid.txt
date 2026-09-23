@@ -4,7 +4,6 @@ ______________POST
 {{_baseUrl}}/api/orders/create
 
 header: {
-  - token: Customer (optional)
 }
 
 query: {
@@ -23,12 +22,9 @@ body: {
 }
 
 note:
-  - no otp, no users table
-  - body name/email/phone always win if sent
-  - customer token only fills missing name/email/phone
-  - admin token is ignored for customer fields
-  - without customer token: name, email, phone required, system creates a new customer token
-  - with customer token: order_item enough if token has name/email/phone
+  - public route, no header token needed
+  - name, email, phone always from body only
+  - response always returns a customer token
   - token payload: name, email, phone, role: customer
   - name, email, phone saved on the order itself
   - order_item id is menu id
@@ -36,16 +32,7 @@ note:
   - system sets order_number as 0001, 0002, 0003, ...
   - notifies all admin
 
-Response (has token): {
-  {
-    "success": true,
-    "message": "Order created successfully",
-    "id": "uuid",
-    "order_number": "0001"
-  }
-}
-
-Response (new token): {
+Response: {
   {
     "success": true,
     "message": "Order created successfully",

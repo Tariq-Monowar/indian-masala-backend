@@ -10,56 +10,20 @@ const nextOrderNumber = async () => {
 export const createOrder = async (request, reply) => {
   try {
     const { name, email, phone, order_item } = request.body || {};
-    const rawToken = request.headers.token || request.headers.authorization;
-    const headerToken =
-      typeof rawToken === "string"
-        ? rawToken.replace(/^Bearer\s+/i, "").trim()
-        : "";
 
-    let customerName = name;
-    let customerEmail = email;
-    let customerPhone = phone;
-    let usedCustomerToken = false;
-    let newToken: string | null = null;
-
-    if (headerToken) {
-      try {
-        const payload = jwt.verify(
-          headerToken,
-          process.env.JWT_SECRET as string,
-        ) as {
-          name?: string;
-          email?: string;
-          phone?: string;
-          role?: string;
-        };
-
-        if (payload.role === "customer") {
-          usedCustomerToken = true;
-          customerName = customerName || payload.name;
-          customerEmail = customerEmail || payload.email;
-          customerPhone = customerPhone || payload.phone;
-        }
-      } catch {
-        return reply
-          .status(401)
-          .send({ success: false, message: "Invalid token" });
-      }
-    }
-
-    if (!customerName) {
+    if (!name) {
       return reply
         .status(400)
         .send({ success: false, message: "name is required!" });
     }
 
-    if (!customerEmail) {
+    if (!email) {
       return reply
         .status(400)
         .send({ success: false, message: "email is required!" });
     }
 
-    if (!customerPhone) {
+    if (!phone) {
       return reply
         .status(400)
         .send({ success: false, message: "phone is required!" });
@@ -106,9 +70,9 @@ export const createOrder = async (request, reply) => {
     const order_number = await nextOrderNumber();
 
     const order = await (db as any).order.create({
-      name: customerName,
-      email: customerEmail,
-      phone: customerPhone,
+      name,
+      email,
+      phone,
       order_number,
       total_price,
       status: "pending",
@@ -121,31 +85,29 @@ export const createOrder = async (request, reply) => {
     void notify({
       io: request.server.io,
       inApp: {
-        message: `New order #${order_number} from ${customerName} for ${total_price} with ${lines.length} item(s).`,
+        message: `New order #${order_number} from ${name} for ${total_price} with ${lines.length} item(s).`,
         type: "new_order",
         object_id: order.id,
         role: "admin",
       },
     });
 
-    if (!usedCustomerToken) {
-      newToken = jwt.sign(
-        {
-          name: customerName,
-          email: customerEmail,
-          phone: customerPhone,
-          role: "customer",
-        },
-        process.env.JWT_SECRET as string,
-      );
-    }
+    const token = jwt.sign(
+      {
+        name,
+        email,
+        phone,
+        role: "customer",
+      },
+      process.env.JWT_SECRET as string,
+    );
 
     return reply.status(201).send({
       success: true,
       message: "Order created successfully",
       id: order.id,
       order_number,
-      ...(newToken && { token: newToken }),
+      token,
     });
   } catch (error) {
     request.log.error(error);
