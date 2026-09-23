@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
 
@@ -8,21 +9,44 @@ const nextOrderNumber = async () => {
 
 export const createOrder = async (request, reply) => {
   try {
-    const { name, email, phone, order_item } = request.body;
+    const { name, email, phone, order_item } = request.body || {};
+    const headerToken = request.headers.token || request.headers.authorization;
 
-    if (!name) {
+    let customerName = name;
+    let customerEmail = email;
+    let customerPhone = phone;
+    let newToken: string | null = null;
+
+    if (headerToken) {
+      try {
+        const payload = jwt.verify(
+          headerToken as string,
+          process.env.JWT_SECRET as string,
+        ) as { name?: string; email?: string; phone?: string };
+
+        customerName = payload.name;
+        customerEmail = payload.email;
+        customerPhone = payload.phone;
+      } catch {
+        return reply
+          .status(401)
+          .send({ success: false, message: "Invalid token" });
+      }
+    }
+
+    if (!customerName) {
       return reply
         .status(400)
         .send({ success: false, message: "name is required!" });
     }
 
-    if (!email) {
+    if (!customerEmail) {
       return reply
         .status(400)
         .send({ success: false, message: "email is required!" });
     }
 
-    if (!phone) {
+    if (!customerPhone) {
       return reply
         .status(400)
         .send({ success: false, message: "phone is required!" });
@@ -69,9 +93,9 @@ export const createOrder = async (request, reply) => {
     const order_number = await nextOrderNumber();
 
     const order = await (db as any).order.create({
-      name,
-      email,
-      phone,
+      name: customerName,
+      email: customerEmail,
+      phone: customerPhone,
       order_number,
       total_price,
       status: "pending",
@@ -84,18 +108,31 @@ export const createOrder = async (request, reply) => {
     void notify({
       io: request.server.io,
       inApp: {
-        message: `New order #${order_number} from ${name} for ${total_price} with ${lines.length} item(s).`,
+        message: `New order #${order_number} from ${customerName} for ${total_price} with ${lines.length} item(s).`,
         type: "new_order",
         object_id: order.id,
         role: "admin",
       },
     });
 
+    if (!headerToken) {
+      newToken = jwt.sign(
+        {
+          name: customerName,
+          email: customerEmail,
+          phone: customerPhone,
+          role: "customer",
+        },
+        process.env.JWT_SECRET as string,
+      );
+    }
+
     return reply.status(201).send({
       success: true,
       message: "Order created successfully",
       id: order.id,
       order_number,
+      ...(newToken && { token: newToken }),
     });
   } catch (error) {
     request.log.error(error);
@@ -107,8 +144,16 @@ export const createOrder = async (request, reply) => {
 
 export const getAllOrders = async (request, reply) => {
   try {
-    const { cursor, limit, search, status, started_date, end_date, object_id } =
-      request.query;
+    const {
+      cursor,
+      limit,
+      search,
+      status,
+      started_date,
+      end_date,
+      object_id,
+      email,
+    } = request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
     const searchPattern = search ? "%" + search.split(" ").join("%") + "%" : "";
@@ -117,6 +162,16 @@ export const getAllOrders = async (request, reply) => {
     const statusCsv = status || "";
     const cursorId = cursor || "";
     const pinnedId = object_id || "";
+    const tokenUser = request.user || {};
+    const emailFilter =
+      tokenUser.role === "customer" ? tokenUser.email || "" : email || "";
+
+    if (tokenUser.role === "customer" && !emailFilter) {
+      return reply.status(400).send({
+        success: false,
+        message: "email is required!",
+      });
+    }
     const useStart = started_date ? 1 : 0;
     const startDate = started_date || "1970-01-01";
     const useEnd = end_date ? 1 : 0;
@@ -195,6 +250,10 @@ export const getAllOrders = async (request, reply) => {
             FROM unnest(string_to_array(${statusCsv}, ',')) AS s
           )
         )
+        AND (
+          ${emailFilter} = ''
+          OR lower(COALESCE(o.email, u.email, '')) = lower(${emailFilter})
+        )
         AND (${useStart} = 0 OR o."createdAt" >= ${startDate}::date)
         AND (${useEnd} = 0 OR o."createdAt" < (${endDate}::date + interval '1 day'))
         AND (
@@ -232,6 +291,55 @@ export const getAllOrders = async (request, reply) => {
       success: true,
       data: rows,
       pagination: { hasMore },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getOrderStatus = async (request, reply) => {
+  try {
+    const { id, order_number } = request.query;
+    const orderId = id || "";
+    const orderNumber = order_number || "";
+
+    if (!orderId && !orderNumber) {
+      return reply.status(400).send({
+        success: false,
+        message: "id or order_number is required!",
+      });
+    }
+
+    const plan = prisma.raw.sql`
+      SELECT o.status
+      FROM "order" o
+      WHERE
+        (${orderNumber} <> '' AND o.order_number = ${orderNumber})
+        OR (${orderNumber} = '' AND o.id = ${orderId})
+      LIMIT 1
+    `
+      .returnsRow({
+        status: { codecId: "pg/text@1", nullable: true },
+      })
+      .build();
+
+    const result = await prisma.runtime().query(plan);
+    const list = Array.isArray(result) ? result : [];
+    const row = list[0];
+
+    if (!row) {
+      return reply
+        .status(404)
+        .send({ success: false, message: "Order not found!" });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      status: row.status,
     });
   } catch (error) {
     request.log.error(error);

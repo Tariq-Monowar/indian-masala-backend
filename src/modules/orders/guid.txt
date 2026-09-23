@@ -4,6 +4,7 @@ ______________POST
 {{_baseUrl}}/api/orders/create
 
 header: {
+  - token: Customer (optional)
 }
 
 query: {
@@ -22,19 +23,32 @@ body: {
 }
 
 note:
-  - public route, no token / no user / no otp
+  - no otp, no users table
+  - with token: only order_item required, name/email/phone come from token
+  - without token: name, email, phone required, system creates a new customer token
+  - token payload: name, email, phone, role: customer
   - name, email, phone saved on the order itself
   - order_item id is menu id
   - system sets unit_price and total_price
   - system sets order_number as 0001, 0002, 0003, ...
   - notifies all admin
 
-Response: {
+Response (has token): {
   {
     "success": true,
     "message": "Order created successfully",
     "id": "uuid",
     "order_number": "0001"
+  }
+}
+
+Response (new token): {
+  {
+    "success": true,
+    "message": "Order created successfully",
+    "id": "uuid",
+    "order_number": "0001",
+    "token": "jwt..."
   }
 }
 
@@ -44,13 +58,14 @@ ______________GET
 {{_baseUrl}}/api/orders/get
 
 header: {
-  - token: Admin
+  - token: Admin | Customer
 }
 
 query: {
   - cursor={{id}}
   - limit={{limit}}
   - search={{search}}
+  - email={{email}}
   - status={{status,status}}
   - started_date={{YYYY-MM-DD}}
   - end_date={{YYYY-MM-DD}}
@@ -62,10 +77,15 @@ body: {
 
 note:
   - send jwt in token header
+  - customer token: email comes from token, same as ?email={{}}
+  - customer sees only their own orders
+  - admin can still send ?email={{}}
   - cursor is the last order id from the previous page
   - limit defaults to 20 and max is 50
   - do not send cursor on the first page
   - object_id pins that row first, then other rows
+  - email={{}} returns only that customer's orders (order.email, case insensitive)
+  - response includes that customer data: name, email, phone
   - strong search: order id, order_number (0001 or 1), name, email, phone (digits too), status, total_price, food name, quantity
   - spaces in search are flexible (tariq chicken matches)
   - status filter: pending, confirmed, preparing, completed, cancelled
@@ -99,6 +119,35 @@ Response: {
     "pagination": {
       "hasMore": false
     }
+  }
+}
+
+=================================
+get order status
+______________GET
+{{_baseUrl}}/api/orders/status
+
+header: {
+}
+
+query: {
+  - id={{id}}
+  - order_number={{order_number}}
+}
+
+body: {
+}
+
+note:
+  - public route, no token needed
+  - send id or order_number in query
+  - order_number wins if both are sent
+  - only returns status
+
+Response: {
+  {
+    "success": true,
+    "status": "pending"
   }
 }
 

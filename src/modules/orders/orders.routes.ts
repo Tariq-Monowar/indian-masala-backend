@@ -3,6 +3,7 @@ import {
   createOrder,
   getAllOrders,
   getSingleOrder,
+  getOrderStatus,
   updateOrderStatus,
   deleteOrderBulk,
 } from "./orders.controllers";
@@ -22,7 +23,7 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/get",
     {
-      preHandler: [verifyUser("admin")],
+      preHandler: [verifyUser("admin", "customer")],
     },
     getAllOrders,
   );
@@ -32,6 +33,12 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
    * {{_baseUrl}}/api/orders/single
    */
   fastify.get("/single", getSingleOrder);
+
+  /*
+   * get order status
+   * {{_baseUrl}}/api/orders/status
+   */
+  fastify.get("/status", getOrderStatus);
 
   /*
    * update order status
