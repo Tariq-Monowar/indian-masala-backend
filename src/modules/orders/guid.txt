@@ -142,6 +142,53 @@ Response: {
 }
 
 =================================
+get my order
+______________GET
+{{_baseUrl}}/api/orders/my
+
+header: {
+}
+
+query: {
+  - id={{id}}
+  - order_number={{order_number}}
+}
+
+body: {
+}
+
+note:
+  - same as /api/orders/single
+  - public route, no token needed
+  - send id or order_number in query
+  - order_number wins if both are sent
+
+Response: {
+  {
+    "success": true,
+    "data": {
+      "id": "uuid",
+      "order_number": "0001",
+      "customer": {
+        "name": "Tariq Monowar",
+        "email": "tariq@example.com",
+        "phone": "01712345678"
+      },
+      "orders": [
+        {
+          "name": "Butter Chicken",
+          "quantity": 2,
+          "image": "1710000000000-one.jpg"
+        }
+      ],
+      "total_price": 24.5,
+      "status": "pending",
+      "createdAt": "2026-09-19T10:00:00.000Z"
+    }
+  }
+}
+
+=================================
 get single order
 ______________GET
 {{_baseUrl}}/api/orders/single
