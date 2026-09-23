@@ -20,4 +20,5 @@ jobs:
             cd /var/www/backend
             git pull origin main
             npm install
+            node scripts/ensure-order-tables.mjs
             pm2 restart indian-masala

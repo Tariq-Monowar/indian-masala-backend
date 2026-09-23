@@ -24,8 +24,11 @@ body: {
 
 note:
   - no otp, no users table
-  - with token: only order_item required, name/email/phone come from token
-  - without token: name, email, phone required, system creates a new customer token
+  - body name/email/phone always win if sent
+  - customer token only fills missing name/email/phone
+  - admin token is ignored for customer fields
+  - without customer token: name, email, phone required, system creates a new customer token
+  - with customer token: order_item enough if token has name/email/phone
   - token payload: name, email, phone, role: customer
   - name, email, phone saved on the order itself
   - order_item id is menu id

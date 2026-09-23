@@ -10,23 +10,36 @@ const nextOrderNumber = async () => {
 export const createOrder = async (request, reply) => {
   try {
     const { name, email, phone, order_item } = request.body || {};
-    const headerToken = request.headers.token || request.headers.authorization;
+    const rawToken = request.headers.token || request.headers.authorization;
+    const headerToken =
+      typeof rawToken === "string"
+        ? rawToken.replace(/^Bearer\s+/i, "").trim()
+        : "";
 
     let customerName = name;
     let customerEmail = email;
     let customerPhone = phone;
+    let usedCustomerToken = false;
     let newToken: string | null = null;
 
     if (headerToken) {
       try {
         const payload = jwt.verify(
-          headerToken as string,
+          headerToken,
           process.env.JWT_SECRET as string,
-        ) as { name?: string; email?: string; phone?: string };
+        ) as {
+          name?: string;
+          email?: string;
+          phone?: string;
+          role?: string;
+        };
 
-        customerName = payload.name;
-        customerEmail = payload.email;
-        customerPhone = payload.phone;
+        if (payload.role === "customer") {
+          usedCustomerToken = true;
+          customerName = customerName || payload.name;
+          customerEmail = customerEmail || payload.email;
+          customerPhone = customerPhone || payload.phone;
+        }
       } catch {
         return reply
           .status(401)
@@ -115,7 +128,7 @@ export const createOrder = async (request, reply) => {
       },
     });
 
-    if (!headerToken) {
+    if (!usedCustomerToken) {
       newToken = jwt.sign(
         {
           name: customerName,
