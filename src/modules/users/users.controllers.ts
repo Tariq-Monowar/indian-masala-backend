@@ -116,6 +116,65 @@ export const adminLogin = async (request, reply) => {
   }
 };
 
+export const customerLogin = async (request, reply) => {
+  try {
+    const { email } = request.body;
+
+    if (!email) {
+      return reply.status(400).send({
+        success: false,
+        message: "email is required!",
+      });
+    }
+
+    const plan = prisma.raw.sql`
+      SELECT name, email, phone
+      FROM "order"
+      WHERE lower(email) = lower(${email})
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+    `
+      .returnsRow({
+        name: { codecId: "pg/text@1", nullable: true },
+        email: { codecId: "pg/text@1", nullable: true },
+        phone: { codecId: "pg/text@1", nullable: true },
+      })
+      .build();
+
+    const result = await prisma.runtime().query(plan);
+    const list = Array.isArray(result) ? result : [];
+    const customer = list[0];
+
+    if (!customer) {
+      return reply.status(404).send({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        role: "customer",
+      },
+      process.env.JWT_SECRET!,
+    );
+
+    return reply.status(200).send({
+      success: true,
+      token,
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const forgotPasswordSendOtp = async (request, reply) => {
   try {
     const { email } = request.body;

@@ -65,6 +65,34 @@ Response: {
 }
 
 =================================
+customer login
+______________POST
+{{_baseUrl}}/api/users/customer-login
+
+header: {
+}
+
+query: {
+}
+
+body: {
+  - email: string
+}
+
+note:
+  - public route, no password
+  - email must already have an order
+  - token payload is name, email, phone, role: customer
+  - same token used on create order and get all orders
+
+Response: {
+  {
+    "success": true,
+    "token": "jwt"
+  }
+}
+
+=================================
 forgotpassword sendotp
 ______________POST
 {{_baseUrl}}/api/users/forgotpassword/sendotp

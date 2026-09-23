@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import {
   createAdmin,
   adminLogin,
+  customerLogin,
   forgotPasswordSendOtp,
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
@@ -30,6 +31,12 @@ export default async function usersRoutes(fastify: FastifyInstance) {
    * {{_baseUrl}}/api/users/admin-login
    */
   fastify.post("/admin-login", adminLogin);
+
+  /*
+   * customer login
+   * {{_baseUrl}}/api/users/customer-login
+   */
+  fastify.post("/customer-login", customerLogin);
 
   //forgot password
   /*
