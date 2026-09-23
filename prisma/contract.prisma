@@ -101,6 +101,7 @@ model menu_image {
 
 
 
+
 model order {
   id        String    @id @default(uuid())
 
