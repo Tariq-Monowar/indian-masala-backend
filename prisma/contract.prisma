@@ -43,6 +43,8 @@ model company_info {
 model category {
   id        String    @id @default(uuid())
   name      String?
+  name_en   String?
+  name_fr   String?
   icon      String?
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
@@ -67,6 +69,9 @@ model menu {
   max_price Float?
   preparation_time Int?
   spicy_level SpicyLevel?
+  is_favorite Boolean @default(false)
+  is_bestseller Boolean @default(false)
+  is_available Boolean @default(true)
 
   menu_image menu_image[]
   order_item order_item[]

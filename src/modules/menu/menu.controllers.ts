@@ -1,5 +1,17 @@
 import { db, prisma } from "../../../prisma/db";
 import { FileService } from "../../config/storage.config";
+import { mapUploadImages } from "../../utils/upload-url";
+
+function parseBoolFlag(value: unknown, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const next = value.trim().toLowerCase();
+    if (next === "true" || next === "1" || next === "yes") return true;
+    if (next === "false" || next === "0" || next === "no") return false;
+  }
+  return fallback;
+}
 
 export const createMenu = async (request, reply) => {
   try {
@@ -10,6 +22,9 @@ export const createMenu = async (request, reply) => {
       max_price,
       preparation_time,
       spicy_level,
+      is_favorite,
+      is_bestseller,
+      is_available,
       description_en,
       description_fr,
     } = request.body;
@@ -25,7 +40,11 @@ export const createMenu = async (request, reply) => {
           message: "Category not found!",
         });
       }
-      category_name = category.name;
+      category_name =
+        (typeof category.name_en === "string" && category.name_en.trim()) ||
+        (typeof category.name === "string" && category.name.trim()) ||
+        (typeof category.name_fr === "string" && category.name_fr.trim()) ||
+        null;
       icon = category.icon;
     }
 
@@ -38,6 +57,9 @@ export const createMenu = async (request, reply) => {
       max_price: max_price ? Number(max_price) : null,
       preparation_time: preparation_time ? Number(preparation_time) : null,
       spicy_level,
+      is_favorite: parseBoolFlag(is_favorite, false),
+      is_bestseller: parseBoolFlag(is_bestseller, false),
+      is_available: parseBoolFlag(is_available, true),
       description_en,
       description_fr,
     });
@@ -60,7 +82,7 @@ export const createMenu = async (request, reply) => {
       success: true,
       data: {
         ...menu,
-        images,
+        images: mapUploadImages(images, request),
       },
     });
   } catch (error) {
@@ -87,6 +109,9 @@ export const getAllMenu = async (request, reply) => {
       preparation_time,
       sort,
       sort_by,
+      is_favorite,
+      is_bestseller,
+      is_available,
     } = request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
@@ -114,9 +139,9 @@ export const getAllMenu = async (request, reply) => {
 
     const spicyCsv = spicy_level
       ? spicy_level
-          .split(",")
-          .map((level) => level.trim().toLowerCase())
-          .join(",")
+        .split(",")
+        .map((level) => level.trim().toLowerCase())
+        .join(",")
       : "";
 
     const minParts = min_price ? min_price.split(",") : [];
@@ -158,8 +183,8 @@ export const getAllMenu = async (request, reply) => {
         : 0;
     const usePrepTo =
       preparation_time &&
-      preparation_time.split(",")[1] &&
-      !Number.isNaN(prepTo)
+        preparation_time.split(",")[1] &&
+        !Number.isNaN(prepTo)
         ? 1
         : 0;
 
@@ -174,6 +199,30 @@ export const getAllMenu = async (request, reply) => {
       sortKey = "createdAt_asc";
     }
 
+    const hasFavoriteFilter =
+      is_favorite !== undefined &&
+      is_favorite !== null &&
+      String(is_favorite).trim() !== "";
+    const useFavorite = hasFavoriteFilter ? 1 : 0;
+    const favoriteValue =
+      hasFavoriteFilter && parseBoolFlag(is_favorite, false) ? 1 : 0;
+
+    const hasBestsellerFilter =
+      is_bestseller !== undefined &&
+      is_bestseller !== null &&
+      String(is_bestseller).trim() !== "";
+    const useBestseller = hasBestsellerFilter ? 1 : 0;
+    const bestsellerValue =
+      hasBestsellerFilter && parseBoolFlag(is_bestseller, false) ? 1 : 0;
+
+    const hasAvailableFilter =
+      is_available !== undefined &&
+      is_available !== null &&
+      String(is_available).trim() !== "";
+    const useAvailable = hasAvailableFilter ? 1 : 0;
+    const availableValue =
+      hasAvailableFilter && parseBoolFlag(is_available, true) ? 1 : 0;
+
     const cursorId = cursor || "";
 
     const plan = prisma.raw.sql`
@@ -187,6 +236,9 @@ export const getAllMenu = async (request, reply) => {
         m.max_price,
         m.preparation_time,
         m.spicy_level,
+        m.is_favorite,
+        m.is_bestseller,
+        m.is_available,
         m.description_en,
         m.description_fr,
         m."createdAt",
@@ -229,6 +281,21 @@ export const getAllMenu = async (request, reply) => {
         )
         AND (${usePrepFrom} = 0 OR m.preparation_time >= ${prepFrom})
         AND (${usePrepTo} = 0 OR m.preparation_time <= ${prepTo})
+        AND (
+          ${useFavorite} = 0
+          OR (${favoriteValue} = 1 AND m.is_favorite = true)
+          OR (${favoriteValue} = 0 AND m.is_favorite = false)
+        )
+        AND (
+          ${useBestseller} = 0
+          OR (${bestsellerValue} = 1 AND m.is_bestseller = true)
+          OR (${bestsellerValue} = 0 AND m.is_bestseller = false)
+        )
+        AND (
+          ${useAvailable} = 0
+          OR (${availableValue} = 1 AND m.is_available = true)
+          OR (${availableValue} = 0 AND m.is_available = false)
+        )
         AND (
           ${cursorId} = ''
           OR NOT EXISTS (SELECT 1 FROM menu c WHERE c.id = ${cursorId})
@@ -287,6 +354,9 @@ export const getAllMenu = async (request, reply) => {
         max_price: { codecId: "pg/float8@1", nullable: true },
         preparation_time: { codecId: "pg/int4@1", nullable: true },
         spicy_level: { codecId: "pg/text@1", nullable: true },
+        is_favorite: "pg/bool@1",
+        is_bestseller: "pg/bool@1",
+        is_available: "pg/bool@1",
         description_en: { codecId: "pg/text@1", nullable: true },
         description_fr: { codecId: "pg/text@1", nullable: true },
         createdAt: "pg/timestamptz-string@1",
@@ -301,7 +371,10 @@ export const getAllMenu = async (request, reply) => {
 
     return reply.status(200).send({
       success: true,
-      data: rows,
+      data: rows.map((row) => ({
+        ...row,
+        images: mapUploadImages(row.images, request),
+      })),
       pagination: { hasMore },
     });
   } catch (error) {
@@ -348,11 +421,14 @@ export const getSingleMenu = async (request, reply) => {
         max_price: menu.max_price,
         preparation_time: menu.preparation_time,
         spicy_level: menu.spicy_level,
+        is_favorite: menu.is_favorite,
+        is_bestseller: menu.is_bestseller,
+        is_available: menu.is_available,
         description_en: menu.description_en,
         description_fr: menu.description_fr,
         createdAt: menu.createdAt,
         updatedAt: menu.updatedAt,
-        images: menu.menu_image,
+        images: mapUploadImages(menu.menu_image, request),
       },
     });
   } catch (error) {
@@ -374,6 +450,9 @@ export const updateMenu = async (request, reply) => {
       max_price,
       preparation_time,
       spicy_level,
+      is_favorite,
+      is_bestseller,
+      is_available,
       description_en,
       description_fr,
     } = request.body;
@@ -405,7 +484,11 @@ export const updateMenu = async (request, reply) => {
           message: "Category not found!",
         });
       }
-      category_name = category.name;
+      category_name =
+        (typeof category.name_en === "string" && category.name_en.trim()) ||
+        (typeof category.name === "string" && category.name.trim()) ||
+        (typeof category.name_fr === "string" && category.name_fr.trim()) ||
+        null;
       icon = category.icon;
     }
 
@@ -420,6 +503,22 @@ export const updateMenu = async (request, reply) => {
         ? Number(preparation_time)
         : existing.preparation_time,
       spicy_level: spicy_level ?? existing.spicy_level,
+      is_favorite:
+        is_favorite === undefined || is_favorite === null || is_favorite === ""
+          ? existing.is_favorite
+          : parseBoolFlag(is_favorite, existing.is_favorite),
+      is_bestseller:
+        is_bestseller === undefined ||
+        is_bestseller === null ||
+        is_bestseller === ""
+          ? existing.is_bestseller
+          : parseBoolFlag(is_bestseller, existing.is_bestseller),
+      is_available:
+        is_available === undefined ||
+        is_available === null ||
+        is_available === ""
+          ? existing.is_available
+          : parseBoolFlag(is_available, existing.is_available),
       description_en: description_en ?? existing.description_en,
       description_fr: description_fr ?? existing.description_fr,
     });
@@ -450,7 +549,7 @@ export const updateMenu = async (request, reply) => {
       success: true,
       data: {
         ...menu,
-        images,
+        images: mapUploadImages(images, request),
       },
     });
   } catch (error) {
@@ -516,6 +615,42 @@ export const deleteImageBulk = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       message: "Images deleted successfully",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const deleteSingleImage = async (request, reply) => {
+  try {
+    const { id } = request.params;
+
+    if (!id) {
+      return reply.status(400).send({
+        success: false,
+        message: "id is required!",
+      });
+    }
+
+    const row = await db.menu_image.where({ id }).first();
+    if (!row) {
+      return reply.status(404).send({
+        success: false,
+        message: "Image not found!",
+      });
+    }
+
+    FileService.removeFile(row.image);
+    await db.menu_image.where({ id }).delete();
+
+    return reply.status(200).send({
+      success: true,
+      message: "Image deleted successfully",
+      data: { id },
     });
   } catch (error) {
     request.log.error(error);

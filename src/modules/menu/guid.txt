@@ -78,6 +78,7 @@ query: {
   - preparation_time={{1,20}}
   - sort={{asc|desc}}
   - sort_by={{createdAt|price|min_price|max_price|preparation_time}}
+  - is_favorite={{true|false}}
 }
 
 body: {
@@ -95,6 +96,7 @@ note:
   - preparation_time is a from,to minute range
   - sort defaults to desc
   - sort_by defaults to createdAt
+  - is_favorite=true returns only favorites; omit it to return every item
 
 Response: {
   {

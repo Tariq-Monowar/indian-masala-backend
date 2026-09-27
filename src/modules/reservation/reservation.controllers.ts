@@ -1,5 +1,10 @@
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
+import { markObjectNotificationsRead } from "../../notifications/in_app/mark-handled";
+import {
+  companyForEmail,
+  reservationConfirmedHtml,
+} from "../../notifications/email/templates/booking-confirmed";
 
 export const createReservation = async (request, reply) => {
   try {
@@ -168,6 +173,10 @@ export const getAllReservation = async (request, reply) => {
         AND (${useStart} = 0 OR r."createdAt" >= ${startDate}::date)
         AND (${useEnd} = 0 OR r."createdAt" < (${endDate}::date + interval '1 day'))
         AND (
+          ${pinnedId} = ''
+          OR r.id = ${pinnedId}
+        )
+        AND (
           ${cursorId} = ''
           OR NOT EXISTS (SELECT 1 FROM reservation c WHERE c.id = ${cursorId})
           OR (r."createdAt", r.id) < (
@@ -175,7 +184,6 @@ export const getAllReservation = async (request, reply) => {
           )
         )
       ORDER BY
-        CASE WHEN r.id = ${pinnedId} THEN 0 ELSE 1 END,
         r."createdAt" DESC,
         r.id DESC
       LIMIT ${take + 1}
@@ -288,10 +296,29 @@ export const updateReservationStatus = async (request, reply) => {
       });
     }
 
+    const company = await companyForEmail(db);
+
     for (const id of ids) {
       const existing = await db.reservation.where({ id }).first();
       if (!existing) continue;
+      const wasConfirmed = existing.status === "confirmed";
       await db.reservation.where({ id }).update({ status });
+
+      const email =
+        typeof existing.email === "string" ? existing.email.trim() : "";
+      if (status === "confirmed" && !wasConfirmed && email.includes("@")) {
+        void notify({
+          email: {
+            to: email,
+            subject: "Your reservation is confirmed — Indian Masala",
+            html: reservationConfirmedHtml(existing, company),
+          },
+        }).catch((error) => request.log.error(error));
+      }
+    }
+
+    if (status !== "pending") {
+      await markObjectNotificationsRead(ids);
     }
 
     return reply.status(200).send({
@@ -321,6 +348,8 @@ export const deleteReservationBulk = async (request, reply) => {
     for (const id of ids) {
       await db.reservation.where({ id }).delete();
     }
+
+    await markObjectNotificationsRead(ids);
 
     return reply.status(200).send({
       success: true,

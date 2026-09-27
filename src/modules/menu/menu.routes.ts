@@ -7,6 +7,7 @@ import {
   updateMenu,
   deleteMenuBulk,
   deleteImageBulk,
+  deleteSingleImage,
 } from "./menu.controllers";
 import { upload } from "../../config/storage.config";
 import { verifyUser } from "../../middleware/auth.middleware";
@@ -67,8 +68,21 @@ export default async function menuRoutes(fastify: FastifyInstance) {
   );
 
   /*
+   * delete one image
+   * {{_baseUrl}}/api/menu/image/:id
+  */
+  fastify.delete(
+    "/image/:id",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    deleteSingleImage,
+  );
+
+  /*
    * delete image bulk
    * {{_baseUrl}}/api/menu/image
+   * body: { ids: string[] }
   */
   fastify.delete(
     "/image",

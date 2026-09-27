@@ -1,10 +1,20 @@
 import jwt from "jsonwebtoken";
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
+import { markObjectNotificationsRead } from "../../notifications/in_app/mark-handled";
 
 const nextOrderNumber = async () => {
-  const rows = await (db as any).order.select("id").all();
-  return String((rows?.length || 0) + 1).padStart(4, "0");
+  const plan = prisma.raw.sql`
+    SELECT COUNT(*)::int AS total FROM "order"
+  `
+    .returnsRow({
+      total: "pg/int4@1",
+    })
+    .build();
+  const result = await prisma.runtime().query(plan);
+  const list = Array.isArray(result) ? result : [];
+  const total = Number(list[0]?.total || 0);
+  return String(total + 1).padStart(4, "0");
 };
 
 export const createOrder = async (request, reply) => {
@@ -48,12 +58,19 @@ export const createOrder = async (request, reply) => {
 
       const menu = await db.menu
         .where({ id: item.id })
-        .select("id", "food_name", "min_price", "max_price")
+        .select("id", "food_name", "min_price", "max_price", "is_available")
         .first();
       if (!menu) {
         return reply
           .status(404)
           .send({ success: false, message: "Menu item not found!" });
+      }
+
+      if (menu.is_available === false) {
+        return reply.status(400).send({
+          success: false,
+          message: `${menu.food_name || "Item"} is not available!`,
+        });
       }
 
       const unit_price = menu.min_price ?? menu.max_price ?? 0;
@@ -235,6 +252,10 @@ export const getAllOrders = async (request, reply) => {
           ${orderNumberFilter} = ''
           OR o.order_number = ${orderNumberFilter}
         )
+        AND (
+          ${pinnedId} = ''
+          OR o.id = ${pinnedId}
+        )
         AND (${useStart} = 0 OR o."createdAt" >= ${startDate}::date)
         AND (${useEnd} = 0 OR o."createdAt" < (${endDate}::date + interval '1 day'))
         AND (
@@ -245,7 +266,6 @@ export const getAllOrders = async (request, reply) => {
           )
         )
       ORDER BY
-        CASE WHEN o.id = ${pinnedId} THEN 0 ELSE 1 END,
         o."createdAt" DESC,
         o.id DESC
       LIMIT ${take + 1}
@@ -465,6 +485,10 @@ export const updateOrderStatus = async (request, reply) => {
       await (db as any).order.where({ id }).update({ status });
     }
 
+    if (status !== "pending") {
+      await markObjectNotificationsRead(ids);
+    }
+
     return reply.status(200).send({
       success: true,
       message: "Order status updated successfully",
@@ -491,6 +515,8 @@ export const deleteOrderBulk = async (request, reply) => {
     for (const id of ids) {
       await (db as any).order.where({ id }).delete();
     }
+
+    await markObjectNotificationsRead(ids);
 
     return reply.status(200).send({
       success: true,

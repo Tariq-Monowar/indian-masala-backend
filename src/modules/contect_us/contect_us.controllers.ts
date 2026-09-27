@@ -1,5 +1,6 @@
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
+import { markObjectNotificationsRead } from "../../notifications/in_app/mark-handled";
 
 export const createContectUs = async (request, reply) => {
   try {
@@ -120,6 +121,10 @@ export const getAllContectUs = async (request, reply) => {
         AND (${useStart} = 0 OR c."createdAt" >= ${startDate}::date)
         AND (${useEnd} = 0 OR c."createdAt" < (${endDate}::date + interval '1 day'))
         AND (
+          ${pinnedId} = ''
+          OR c.id = ${pinnedId}
+        )
+        AND (
           ${cursorId} = ''
           OR NOT EXISTS (SELECT 1 FROM contect_us x WHERE x.id = ${cursorId})
           OR (c."createdAt", c.id) < (
@@ -127,7 +132,6 @@ export const getAllContectUs = async (request, reply) => {
           )
         )
       ORDER BY
-        CASE WHEN c.id = ${pinnedId} THEN 0 ELSE 1 END,
         c."createdAt" DESC,
         c.id DESC
       LIMIT ${take + 1}
@@ -177,6 +181,8 @@ export const deleteContectUsBulk = async (request, reply) => {
     for (const id of ids) {
       await db.contect_us.where({ id }).delete();
     }
+
+    await markObjectNotificationsRead(ids);
 
     return reply.status(200).send({
       success: true,

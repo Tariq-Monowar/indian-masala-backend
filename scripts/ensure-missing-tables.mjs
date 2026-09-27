@@ -110,6 +110,54 @@ if (existing.has("menu") && !(await hasColumn("menu", "company_info_id"))) {
   console.log("added menu.company_info_id");
 }
 
+if (existing.has("menu") && !(await hasColumn("menu", "is_favorite"))) {
+  await c.query(
+    `ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_favorite boolean NOT NULL DEFAULT false`,
+  );
+  console.log("added menu.is_favorite");
+}
+
+if (existing.has("menu") && !(await hasColumn("menu", "is_bestseller"))) {
+  await c.query(
+    `ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_bestseller boolean NOT NULL DEFAULT false`,
+  );
+  console.log("added menu.is_bestseller");
+}
+
+if (existing.has("menu") && !(await hasColumn("menu", "is_available"))) {
+  await c.query(
+    `ALTER TABLE menu ADD COLUMN IF NOT EXISTS is_available boolean NOT NULL DEFAULT true`,
+  );
+  console.log("added menu.is_available");
+}
+
+if (existing.has("category") && !(await hasColumn("category", "name_en"))) {
+  await c.query(
+    `ALTER TABLE category ADD COLUMN IF NOT EXISTS name_en text`,
+  );
+  console.log("added category.name_en");
+}
+
+if (existing.has("category") && !(await hasColumn("category", "name_fr"))) {
+  await c.query(
+    `ALTER TABLE category ADD COLUMN IF NOT EXISTS name_fr text`,
+  );
+  console.log("added category.name_fr");
+}
+
+if (existing.has("category")) {
+  await c.query(`
+    UPDATE category
+    SET
+      name_en = COALESCE(NULLIF(TRIM(name_en), ''), NULLIF(TRIM(name), '')),
+      name_fr = COALESCE(NULLIF(TRIM(name_fr), ''), NULLIF(TRIM(name), ''))
+    WHERE
+      (name_en IS NULL OR TRIM(name_en) = '')
+      OR (name_fr IS NULL OR TRIM(name_fr) = '')
+  `);
+  console.log("backfilled category.name_en / name_fr from name");
+}
+
 const after = await c.query(
   `SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`,
 );

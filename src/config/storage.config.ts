@@ -3,6 +3,7 @@ import fs from "fs";
 import { pipeline } from "stream/promises";
 import multipart from "@fastify/multipart";
 import { FastifyInstance } from "fastify";
+import { sanitizeUploadFilename } from "../utils/upload-url";
 
 export const uploads = path.join(import.meta.dirname, "../../uploads");
 
@@ -23,7 +24,8 @@ export function registerMultipart(app: FastifyInstance) {
         return;
       }
 
-      const filename = `${Date.now()}-${part.filename}`;
+      const safeName = sanitizeUploadFilename(part.filename);
+      const filename = `${Date.now()}-${safeName}`;
       await pipeline(part.file, fs.createWriteStream(path.join(uploads, filename)));
       Object.assign(part, { value: filename });
     },
@@ -33,8 +35,19 @@ export function registerMultipart(app: FastifyInstance) {
 export const FileService = {
   removeFile(file) {
     if (!file) return;
-    const filepath = file.path || path.join(uploads, file);
-    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+    let name = file.path || file;
+    if (typeof name === "string") {
+      if (
+        name.startsWith("http://") ||
+        name.startsWith("https://") ||
+        name.includes("/uploads/")
+      ) {
+        const parts = name.replace(/\\/g, "/").split("/");
+        name = decodeURIComponent(parts[parts.length - 1] || name);
+      }
+      name = path.join(uploads, name);
+    }
+    if (fs.existsSync(name)) fs.unlinkSync(name);
   },
 
   removeFiles(files) {

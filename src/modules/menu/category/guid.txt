@@ -10,12 +10,16 @@ query: {
 }
 
 body: {
-  - name: string
+  - name_en: string
+  - name_fr: string
   - icon: string
 }
 
 note:
-  - name is required
+  - name_en and name_fr are required
+  - legacy body `name` is accepted only as fallback if name_en/name_fr missing
+  - response returns only name_en + name_fr (no legacy `name` field)
+  - DB column `name` is synced from name_en for menu.category_name denorm only
   - icon is optional
 
 Response: {
@@ -23,7 +27,8 @@ Response: {
     "success": true,
     "data": {
       "id": "uuid",
-      "name": "Starters",
+      "name_en": "Starters",
+      "name_fr": "Entrées",
       "icon": "starter.png",
       "createdAt": "2026-09-12T10:00:00.000Z",
       "updatedAt": "2026-09-12T10:00:00.000Z"
@@ -52,7 +57,7 @@ note:
   - cursor is the last category id from the previous page
   - limit defaults to 20
   - do not send cursor on the first page
-  - search matches name
+  - search matches name_en, name_fr, and legacy name
 
 Response: {
   {
@@ -60,7 +65,8 @@ Response: {
     "data": [
       {
         "id": "uuid",
-        "name": "Starters",
+        "name_en": "Starters",
+        "name_fr": "Entrées",
         "icon": "starter.png",
         "createdAt": "2026-09-12T10:00:00.000Z"
       }
@@ -83,20 +89,23 @@ query: {
 }
 
 body: {
-  - name: string
+  - name_en: string
+  - name_fr: string
   - icon: string
 }
 
 note:
   - id is in the URL
-  - name and icon are optional
+  - name_en, name_fr, and icon are optional independently
+  - updating names also syncs menu.category_name (English)
 
 Response: {
   {
     "success": true,
     "data": {
       "id": "uuid",
-      "name": "Starters",
+      "name_en": "Starters",
+      "name_fr": "Entrées",
       "icon": "starter.png",
       "createdAt": "2026-09-12T10:00:00.000Z",
       "updatedAt": "2026-09-12T10:00:00.000Z"

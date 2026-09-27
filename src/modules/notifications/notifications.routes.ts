@@ -3,7 +3,10 @@ import {
   getAllNotifications,
   getUnreadCount,
   markAllNotificationsRead,
+  markNotificationRead,
+  markObjectNotificationsHandled,
   deleteNotificationBulk,
+  clearAllNotifications,
 } from "./notifications.controllers";
 import { verifyUser } from "../../middleware/auth.middleware";
 
@@ -42,6 +45,38 @@ export default async function notificationsRoutes(fastify: FastifyInstance) {
       preHandler: [verifyUser("admin")],
     },
     markAllNotificationsRead,
+  );
+
+  /*
+   * mark one notification as read
+   * {{_baseUrl}}/api/notifications/read/:id
+  */
+  fastify.patch(
+    "/read-object",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    markObjectNotificationsHandled,
+  );
+
+  fastify.patch(
+    "/read/:id",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    markNotificationRead,
+  );
+
+  /*
+   * clear all notifications
+   * {{_baseUrl}}/api/notifications/clear
+  */
+  fastify.delete(
+    "/clear",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    clearAllNotifications,
   );
 
   /*

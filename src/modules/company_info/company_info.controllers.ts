@@ -1,9 +1,37 @@
 import { companyInfo, prisma } from "../../../prisma/db";
 
+async function redisGet(redis: { get: (key: string) => Promise<string | null> }, key: string) {
+  try {
+    return await redis.get(key);
+  } catch {
+    return null;
+  }
+}
+
+async function redisSet(
+  redis: { set: (key: string, value: string) => Promise<unknown> },
+  key: string,
+  value: string,
+) {
+  try {
+    await redis.set(key, value);
+  } catch {
+    // Redis optional — ignore cache write failures
+  }
+}
+
+async function redisDel(redis: { del: (key: string) => Promise<unknown> }, key: string) {
+  try {
+    await redis.del(key);
+  } catch {
+    // Redis optional — ignore cache clear failures
+  }
+}
+
 export const getCompanyInfo = async (request, reply) => {
   try {
     const redis = request.server.redis;
-    const cached = await redis.get("company_info");
+    const cached = await redisGet(redis, "company_info");
 
     if (cached) {
       return reply.status(200).send({
@@ -46,7 +74,7 @@ export const getCompanyInfo = async (request, reply) => {
     const list = Array.isArray(result) ? result : [];
     const info = list[0] || null;
 
-    await redis.set("company_info", JSON.stringify(info));
+    await redisSet(redis, "company_info", JSON.stringify(info));
 
     return reply.status(200).send({
       success: true,
@@ -104,7 +132,7 @@ export const createCompanyInfo = async (request, reply) => {
       });
     }
 
-    await request.server.redis.del("company_info");
+    await redisDel(request.server.redis, "company_info");
 
     return reply.status(existing ? 200 : 201).send({
       success: true,

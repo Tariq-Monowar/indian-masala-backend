@@ -121,6 +121,38 @@ Response: {
 }
 
 =================================
+mark one notification as read
+______________PATCH
+{{_baseUrl}}/api/notifications/read/:id
+
+header: {
+  - token: Admin
+}
+
+query: {
+}
+
+body: {
+}
+
+note:
+  - send jwt in token header
+  - id is the notification id in the URL
+  - marks that notification as read
+  - use this when admin clicks a notification
+
+Response: {
+  {
+    "success": true,
+    "message": "Notification marked as read successfully",
+    "data": {
+      "id": "uuid",
+      "is_read": true
+    }
+  }
+}
+
+=================================
 mark all unread as read
 ______________PATCH
 {{_baseUrl}}/api/notifications/read-all

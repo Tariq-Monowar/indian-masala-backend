@@ -203,6 +203,20 @@
                   "kind": "scalar"
                 }
               },
+              "name_en": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name_fr": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "updatedAt": {
                 "nullable": false,
                 "type": {
@@ -225,6 +239,12 @@
                 },
                 "name": {
                   "column": "name"
+                },
+                "name_en": {
+                  "column": "name_en"
+                },
+                "name_fr": {
+                  "column": "name_fr"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
@@ -664,6 +684,27 @@
                   "kind": "scalar"
                 }
               },
+              "is_available": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "is_bestseller": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "is_favorite": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "max_price": {
                 "nullable": true,
                 "type": {
@@ -796,6 +837,15 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "is_available": {
+                  "column": "is_available"
+                },
+                "is_bestseller": {
+                  "column": "is_bestseller"
+                },
+                "is_favorite": {
+                  "column": "is_favorite"
                 },
                 "max_price": {
                   "column": "max_price"
@@ -1557,6 +1607,16 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "name_en": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "name_fr": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
@@ -1844,6 +1904,33 @@
                 "id": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
+                  "nullable": false
+                },
+                "is_available": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "is_bestseller": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "is_favorite": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
                   "nullable": false
                 },
                 "max_price": {
@@ -2539,7 +2626,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4f510e8696dce07220473465696231e46f99872e1161e0a0ac10dbfe17631cdb"
+    "storageHash": "da2bf417523346874b04907ef6d14c880efb64bca932dd714468f34035145d84"
   },
   "execution": {
     "executionHash": "72cd0e075fb67463932d234a1d3431c94fb57ecd2bd1b63384e5323e56a70ad7",
