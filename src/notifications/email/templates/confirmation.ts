@@ -85,6 +85,11 @@ function changeNote(phone) {
   return `Need a change? Call the restaurant at <a href="${escapeHtml(href)}" style="color:#D26F19;font-weight:600;text-decoration:none;">${escapeHtml(number)}</a>.`;
 }
 
+type ConfirmationDetail = {
+  label: string;
+  value?: unknown;
+};
+
 export function confirmationEmailTemplate({
   eyebrow = "Indian Masala",
   title,
@@ -94,6 +99,15 @@ export function confirmationEmailTemplate({
   companyName = "Indian Masala",
   companyPhone = "",
   companyAddress = "",
+}: {
+  eyebrow?: string;
+  title: string;
+  greeting: string;
+  message: string;
+  details?: ConfirmationDetail[];
+  companyName?: string;
+  companyPhone?: string;
+  companyAddress?: string;
 }) {
   const filled = details.filter((item) => String(item.value ?? "").trim());
   const rows = filled
