@@ -183,6 +183,13 @@ export const updateCategory = async (request, reply) => {
       ...(hasIcon ? { icon: nextIcon } : {}),
     });
 
+    if (!category) {
+      return reply.status(404).send({
+        success: false,
+        message: "Category not found!",
+      });
+    }
+
     // Keep denormalized menu fields in sync (English primary for category_name)
     const linkedMenus = await db.menu
       .select("id")

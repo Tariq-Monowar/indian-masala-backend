@@ -26,7 +26,13 @@ function formatClock(value) {
   return `${hour12}:${minutes} ${suffix}`;
 }
 
-async function loadCompany(db) {
+type CompanyEmailInfo = {
+  companyName?: string;
+  companyPhone?: string;
+  companyAddress?: string;
+};
+
+async function loadCompany(db): Promise<CompanyEmailInfo> {
   try {
     const rows = await db.company_info
       .select(
@@ -55,7 +61,10 @@ async function loadCompany(db) {
   }
 }
 
-export function reservationConfirmedHtml(reservation, company = {}) {
+export function reservationConfirmedHtml(
+  reservation,
+  company: CompanyEmailInfo = {},
+) {
   const name = reservation.name || "Guest";
   return confirmationEmailTemplate({
     eyebrow: "Indian Masala",
@@ -77,7 +86,10 @@ export function reservationConfirmedHtml(reservation, company = {}) {
   });
 }
 
-export function cateringConfirmedHtml(catering, company = {}) {
+export function cateringConfirmedHtml(
+  catering,
+  company: CompanyEmailInfo = {},
+) {
   const name = catering.name || "Guest";
   return confirmationEmailTemplate({
     eyebrow: "Indian Masala",
