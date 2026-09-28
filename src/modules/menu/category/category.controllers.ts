@@ -1,46 +1,12 @@
 import { db, prisma } from "../../../../prisma/db";
 
-function trimText(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function resolveLocalizedNames(body: {
-  name?: unknown;
-  name_en?: unknown;
-  name_fr?: unknown;
-}) {
-  const name_en = trimText(body.name_en) || trimText(body.name);
-  const name_fr = trimText(body.name_fr) || trimText(body.name);
-  return { name_en, name_fr };
-}
-
-function mapCategoryRow(row: {
-  id: string;
-  name?: string | null;
-  name_en?: string | null;
-  name_fr?: string | null;
-  icon?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}) {
-  const name_en = trimText(row.name_en) || trimText(row.name);
-  const name_fr = trimText(row.name_fr) || trimText(row.name);
-  return {
-    id: row.id,
-    name_en: name_en || null,
-    name_fr: name_fr || null,
-    icon: row.icon ?? null,
-    ...(row.createdAt ? { createdAt: row.createdAt } : {}),
-    ...(row.updatedAt ? { updatedAt: row.updatedAt } : {}),
-  };
-}
-
 export const createCategory = async (request, reply) => {
   try {
-    const { name_en, name_fr } = resolveLocalizedNames(request.body || {});
-    const icon = trimText(request.body?.icon) || null;
+    const { name, name_en, name_fr, icon } = request.body || {};
+    const nextNameEn = name_en || name;
+    const nextNameFr = name_fr || name;
 
-    if (!name_en || !name_fr) {
+    if (!nextNameEn || !nextNameFr) {
       return reply.status(400).send({
         success: false,
         message: "name_en and name_fr are required!",
@@ -48,16 +14,22 @@ export const createCategory = async (request, reply) => {
     }
 
     const category = await db.category.create({
-      // DB `name` kept in sync with EN only for old menu.category_name denorm
-      name: name_en,
-      name_en,
-      name_fr,
-      icon,
+      name: nextNameEn,
+      name_en: nextNameEn,
+      name_fr: nextNameFr,
+      icon: icon || null,
     });
 
     return reply.status(201).send({
       success: true,
-      data: mapCategoryRow(category),
+      data: {
+        id: category.id,
+        name_en: category.name_en || category.name || null,
+        name_fr: category.name_fr || category.name || null,
+        icon: category.icon ?? null,
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt,
+      },
     });
   } catch (error) {
     request.log.error(error);
@@ -72,11 +44,10 @@ export const getAllCategory = async (request, reply) => {
   try {
     const { cursor, limit, search } = request.query;
     const take = Number(limit) || 20;
-    const searchText = trimText(search);
-    const searchPattern = searchText
-      ? "%" + searchText.split(" ").join("%") + "%"
+    const searchPattern = search
+      ? "%" + String(search).split(" ").join("%") + "%"
       : "";
-    const cursorId = typeof cursor === "string" ? cursor : "";
+    const cursorId = cursor || "";
 
     const plan = prisma.raw.sql`
       SELECT
@@ -114,11 +85,27 @@ export const getAllCategory = async (request, reply) => {
     const result = await prisma.runtime().query(plan);
     const list = Array.isArray(result) ? result : [];
     const hasMore = list.length > take;
-    const rows = hasMore ? list.slice(0, take) : list;
+    const page = hasMore ? list.slice(0, take) : list;
+    const rows: {
+      id: string;
+      name_en: string | null;
+      name_fr: string | null;
+      icon: string | null;
+      createdAt: string;
+    }[] = [];
+    for (const row of page) {
+      rows.push({
+        id: row.id,
+        name_en: row.name_en || row.name || null,
+        name_fr: row.name_fr || row.name || null,
+        icon: row.icon ?? null,
+        createdAt: row.createdAt,
+      });
+    }
 
     return reply.status(200).send({
       success: true,
-      data: rows.map(mapCategoryRow),
+      data: rows,
       pagination: { hasMore },
     });
   } catch (error) {
@@ -133,7 +120,7 @@ export const getAllCategory = async (request, reply) => {
 export const updateCategory = async (request, reply) => {
   try {
     const { id } = request.params;
-    const body = request.body || {};
+    const { name, name_en, name_fr, icon } = request.body || {};
 
     if (!id) {
       return reply.status(400).send({
@@ -151,21 +138,18 @@ export const updateCategory = async (request, reply) => {
       });
     }
 
-    const hasNameEn = Object.prototype.hasOwnProperty.call(body, "name_en");
-    const hasNameFr = Object.prototype.hasOwnProperty.call(body, "name_fr");
-    const hasName = Object.prototype.hasOwnProperty.call(body, "name");
-    const hasIcon = Object.prototype.hasOwnProperty.call(body, "icon");
-
-    const nextNameEn = hasNameEn
-      ? trimText(body.name_en)
-      : hasName
-        ? trimText(body.name)
-        : trimText(existing.name_en) || trimText(existing.name);
-    const nextNameFr = hasNameFr
-      ? trimText(body.name_fr)
-      : hasName && !hasNameFr
-        ? trimText(body.name)
-        : trimText(existing.name_fr) || trimText(existing.name);
+    const nextNameEn =
+      name_en !== undefined
+        ? name_en
+        : name !== undefined
+          ? name
+          : existing.name_en || existing.name;
+    const nextNameFr =
+      name_fr !== undefined
+        ? name_fr
+        : name !== undefined
+          ? name
+          : existing.name_fr || existing.name;
 
     if (!nextNameEn || !nextNameFr) {
       return reply.status(400).send({
@@ -174,13 +158,11 @@ export const updateCategory = async (request, reply) => {
       });
     }
 
-    const nextIcon = hasIcon ? trimText(body.icon) || null : existing.icon;
-
     const category = await db.category.where({ id }).update({
       name: nextNameEn,
       name_en: nextNameEn,
       name_fr: nextNameFr,
-      ...(hasIcon ? { icon: nextIcon } : {}),
+      icon: icon !== undefined ? icon || null : existing.icon,
     });
 
     if (!category) {
@@ -190,7 +172,6 @@ export const updateCategory = async (request, reply) => {
       });
     }
 
-    // Keep denormalized menu fields in sync (English primary for category_name)
     const linkedMenus = await db.menu
       .select("id")
       .where({ category_id: id })
@@ -198,13 +179,20 @@ export const updateCategory = async (request, reply) => {
     for (const menu of linkedMenus) {
       await db.menu.where({ id: menu.id }).update({
         category_name: nextNameEn,
-        ...(hasIcon ? { icon: nextIcon } : {}),
+        icon: icon !== undefined ? icon || null : existing.icon,
       });
     }
 
     return reply.status(200).send({
       success: true,
-      data: mapCategoryRow(category),
+      data: {
+        id: category.id,
+        name_en: category.name_en || category.name || null,
+        name_fr: category.name_fr || category.name || null,
+        icon: category.icon ?? null,
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt,
+      },
     });
   } catch (error) {
     request.log.error(error);

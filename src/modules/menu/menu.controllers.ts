@@ -1,17 +1,6 @@
 import { db, prisma } from "../../../prisma/db";
 import { FileService } from "../../config/storage.config";
-import { mapUploadImages } from "../../utils/upload-url";
-
-function parseBoolFlag(value: unknown, fallback = false) {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value === 1;
-  if (typeof value === "string") {
-    const next = value.trim().toLowerCase();
-    if (next === "true" || next === "1" || next === "yes") return true;
-    if (next === "false" || next === "0" || next === "no") return false;
-  }
-  return fallback;
-}
+import { toUploadUrl } from "../../utils/upload-url";
 
 export const createMenu = async (request, reply) => {
   try {
@@ -40,11 +29,7 @@ export const createMenu = async (request, reply) => {
           message: "Category not found!",
         });
       }
-      category_name =
-        (typeof category.name_en === "string" && category.name_en.trim()) ||
-        (typeof category.name === "string" && category.name.trim()) ||
-        (typeof category.name_fr === "string" && category.name_fr.trim()) ||
-        null;
+      category_name = category.name_en || category.name || category.name_fr || null;
       icon = category.icon;
     }
 
@@ -57,9 +42,28 @@ export const createMenu = async (request, reply) => {
       max_price: max_price ? Number(max_price) : null,
       preparation_time: preparation_time ? Number(preparation_time) : null,
       spicy_level,
-      is_favorite: parseBoolFlag(is_favorite, false),
-      is_bestseller: parseBoolFlag(is_bestseller, false),
-      is_available: parseBoolFlag(is_available, true),
+      is_favorite:
+        is_favorite === true ||
+        is_favorite === 1 ||
+        is_favorite === "1" ||
+        is_favorite === "true" ||
+        is_favorite === "yes",
+      is_bestseller:
+        is_bestseller === true ||
+        is_bestseller === 1 ||
+        is_bestseller === "1" ||
+        is_bestseller === "true" ||
+        is_bestseller === "yes",
+      is_available:
+        is_available === undefined ||
+        is_available === null ||
+        is_available === ""
+          ? true
+          : is_available === true ||
+            is_available === 1 ||
+            is_available === "1" ||
+            is_available === "true" ||
+            is_available === "yes",
       description_en,
       description_fr,
     });
@@ -73,16 +77,22 @@ export const createMenu = async (request, reply) => {
       }
     }
 
-    const images = await db.menu_image
+    const imageRows = await db.menu_image
       .select("id", "image")
       .where({ menu_id: menu.id })
       .all();
+    const images: { id: string; image: string; url: string }[] = [];
+    for (const imageRow of imageRows || []) {
+      const url = toUploadUrl(imageRow.image, request);
+      if (!imageRow.id || !url) continue;
+      images.push({ id: imageRow.id, image: url, url });
+    }
 
     return reply.status(201).send({
       success: true,
       data: {
         ...menu,
-        images: mapUploadImages(images, request),
+        images,
       },
     });
   } catch (error) {
@@ -205,7 +215,14 @@ export const getAllMenu = async (request, reply) => {
       String(is_favorite).trim() !== "";
     const useFavorite = hasFavoriteFilter ? 1 : 0;
     const favoriteValue =
-      hasFavoriteFilter && parseBoolFlag(is_favorite, false) ? 1 : 0;
+      hasFavoriteFilter &&
+      (is_favorite === true ||
+        is_favorite === 1 ||
+        is_favorite === "1" ||
+        is_favorite === "true" ||
+        is_favorite === "yes")
+        ? 1
+        : 0;
 
     const hasBestsellerFilter =
       is_bestseller !== undefined &&
@@ -213,7 +230,14 @@ export const getAllMenu = async (request, reply) => {
       String(is_bestseller).trim() !== "";
     const useBestseller = hasBestsellerFilter ? 1 : 0;
     const bestsellerValue =
-      hasBestsellerFilter && parseBoolFlag(is_bestseller, false) ? 1 : 0;
+      hasBestsellerFilter &&
+      (is_bestseller === true ||
+        is_bestseller === 1 ||
+        is_bestseller === "1" ||
+        is_bestseller === "true" ||
+        is_bestseller === "yes")
+        ? 1
+        : 0;
 
     const hasAvailableFilter =
       is_available !== undefined &&
@@ -221,7 +245,14 @@ export const getAllMenu = async (request, reply) => {
       String(is_available).trim() !== "";
     const useAvailable = hasAvailableFilter ? 1 : 0;
     const availableValue =
-      hasAvailableFilter && parseBoolFlag(is_available, true) ? 1 : 0;
+      !hasAvailableFilter ||
+      is_available === true ||
+      is_available === 1 ||
+      is_available === "1" ||
+      is_available === "true" ||
+      is_available === "yes"
+        ? 1
+        : 0;
 
     const cursorId = cursor || "";
 
@@ -367,14 +398,39 @@ export const getAllMenu = async (request, reply) => {
     const result = await prisma.runtime().query(plan);
     const list = Array.isArray(result) ? result : [];
     const hasMore = list.length > take;
-    const rows = hasMore ? list.slice(0, take) : list;
+    const page = hasMore ? list.slice(0, take) : list;
+    const rows: {
+      id: string;
+      food_name: string | null;
+      category_id: string | null;
+      category_name: string | null;
+      icon: string | null;
+      min_price: number | null;
+      max_price: number | null;
+      preparation_time: number | null;
+      spicy_level: string | null;
+      is_favorite: boolean;
+      is_bestseller: boolean;
+      is_available: boolean;
+      description_en: string | null;
+      description_fr: string | null;
+      createdAt: string;
+      images: { id: string; image: string; url: string }[];
+    }[] = [];
+    for (const row of page) {
+      const imageRows = Array.isArray(row.images) ? row.images : [];
+      const images: { id: string; image: string; url: string }[] = [];
+      for (const imageRow of imageRows) {
+        const url = toUploadUrl(imageRow?.image, request);
+        if (!imageRow?.id || !url) continue;
+        images.push({ id: imageRow.id, image: url, url });
+      }
+      rows.push({ ...row, images });
+    }
 
     return reply.status(200).send({
       success: true,
-      data: rows.map((row) => ({
-        ...row,
-        images: mapUploadImages(row.images, request),
-      })),
+      data: rows,
       pagination: { hasMore },
     });
   } catch (error) {
@@ -409,6 +465,14 @@ export const getSingleMenu = async (request, reply) => {
       });
     }
 
+    const imageRows = Array.isArray(menu.menu_image) ? menu.menu_image : [];
+    const images: { id: string; image: string; url: string }[] = [];
+    for (const imageRow of imageRows) {
+      const url = toUploadUrl(imageRow?.image, request);
+      if (!imageRow?.id || !url) continue;
+      images.push({ id: imageRow.id, image: url, url });
+    }
+
     return reply.status(200).send({
       success: true,
       data: {
@@ -428,7 +492,7 @@ export const getSingleMenu = async (request, reply) => {
         description_fr: menu.description_fr,
         createdAt: menu.createdAt,
         updatedAt: menu.updatedAt,
-        images: mapUploadImages(menu.menu_image, request),
+        images,
       },
     });
   } catch (error) {
@@ -484,11 +548,7 @@ export const updateMenu = async (request, reply) => {
           message: "Category not found!",
         });
       }
-      category_name =
-        (typeof category.name_en === "string" && category.name_en.trim()) ||
-        (typeof category.name === "string" && category.name.trim()) ||
-        (typeof category.name_fr === "string" && category.name_fr.trim()) ||
-        null;
+      category_name = category.name_en || category.name || category.name_fr || null;
       icon = category.icon;
     }
 
@@ -506,19 +566,31 @@ export const updateMenu = async (request, reply) => {
       is_favorite:
         is_favorite === undefined || is_favorite === null || is_favorite === ""
           ? existing.is_favorite
-          : parseBoolFlag(is_favorite, existing.is_favorite),
+          : is_favorite === true ||
+            is_favorite === 1 ||
+            is_favorite === "1" ||
+            is_favorite === "true" ||
+            is_favorite === "yes",
       is_bestseller:
         is_bestseller === undefined ||
         is_bestseller === null ||
         is_bestseller === ""
           ? existing.is_bestseller
-          : parseBoolFlag(is_bestseller, existing.is_bestseller),
+          : is_bestseller === true ||
+            is_bestseller === 1 ||
+            is_bestseller === "1" ||
+            is_bestseller === "true" ||
+            is_bestseller === "yes",
       is_available:
         is_available === undefined ||
         is_available === null ||
         is_available === ""
           ? existing.is_available
-          : parseBoolFlag(is_available, existing.is_available),
+          : is_available === true ||
+            is_available === 1 ||
+            is_available === "1" ||
+            is_available === "true" ||
+            is_available === "yes",
       description_en: description_en ?? existing.description_en,
       description_fr: description_fr ?? existing.description_fr,
     });
@@ -540,16 +612,22 @@ export const updateMenu = async (request, reply) => {
       }
     }
 
-    const images = await db.menu_image
+    const imageRows = await db.menu_image
       .select("id", "image")
       .where({ menu_id: id })
       .all();
+    const images: { id: string; image: string; url: string }[] = [];
+    for (const imageRow of imageRows || []) {
+      const url = toUploadUrl(imageRow.image, request);
+      if (!imageRow.id || !url) continue;
+      images.push({ id: imageRow.id, image: url, url });
+    }
 
     return reply.status(200).send({
       success: true,
       data: {
         ...menu,
-        images: mapUploadImages(images, request),
+        images,
       },
     });
   } catch (error) {
