@@ -8,6 +8,7 @@ import {
   deleteMenuBulk,
   deleteImageBulk,
   deleteSingleImage,
+  reorderMenus,
 } from "./menu.controllers";
 import { upload } from "../../config/storage.config";
 import { verifyUser } from "../../middleware/auth.middleware";
@@ -36,6 +37,18 @@ export default async function menuRoutes(fastify: FastifyInstance) {
    * {{_baseUrl}}/api/menu/get
   */
   fastify.get("/get", getAllMenu);
+
+  /*
+   * reorder menu items
+   * {{_baseUrl}}/api/menu/reorder
+  */
+  fastify.patch(
+    "/reorder",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    reorderMenus,
+  );
 
   /*
    * get single menu

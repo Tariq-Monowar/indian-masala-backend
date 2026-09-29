@@ -8,6 +8,35 @@ function readPrice(value) {
   return Number.isFinite(amount) ? amount : null;
 }
 
+async function nextMenuSortOrder(categoryId) {
+  const id = typeof categoryId === "string" ? categoryId : "";
+  const plan = prisma.raw.sql`
+    SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order
+    FROM menu
+    WHERE (${id} = '' AND category_id IS NULL) OR category_id = ${id}
+  `
+    .returnsRow({
+      next_order: "pg/int4@1",
+    })
+    .build();
+  const rows = await prisma.runtime().query(plan);
+  return Array.isArray(rows) ? Number(rows[0]?.next_order) || 1 : 1;
+}
+
+async function setMenuSortOrder(menuId, sortOrder) {
+  const plan = prisma.raw.sql`
+    UPDATE menu
+    SET sort_order = ${sortOrder}
+    WHERE id = ${menuId}
+    RETURNING id
+  `
+    .returnsRow({
+      id: "pg/text@1",
+    })
+    .build();
+  await prisma.runtime().query(plan);
+}
+
 function resolveStoredPrices(min_price, max_price, existing = null) {
   const incomingMin = readPrice(min_price);
   const incomingMax = readPrice(max_price);
@@ -86,6 +115,8 @@ export const createMenu = async (request, reply) => {
       description_fr,
     });
 
+    await setMenuSortOrder(menu.id, await nextMenuSortOrder(category_id || null));
+
     if (request.files) {
       for (const file of request.files) {
         await db.menu_image.create({
@@ -136,7 +167,11 @@ export const getAllMenu = async (request, reply) => {
       is_bestseller,
       is_available,
     } = request.query;
-    const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
+    const requested = Number(limit);
+    const take =
+      Number.isFinite(requested) && requested > 0
+        ? Math.min(Math.floor(requested), 200)
+        : 20;
 
     const searchPattern = search
       ? "%" + search.split(" ").join("%") + "%"
@@ -211,15 +246,19 @@ export const getAllMenu = async (request, reply) => {
         ? 1
         : 0;
 
-    let sortKey = "createdAt_desc";
+    let sortKey = "sort_order_asc";
     if (sort_by === "min_price" || sort_by === "price") {
       sortKey = sort === "asc" ? "min_price_asc" : "min_price_desc";
     } else if (sort_by === "max_price") {
       sortKey = sort === "asc" ? "max_price_asc" : "max_price_desc";
     } else if (sort_by === "preparation_time") {
       sortKey = sort === "asc" ? "preparation_time_asc" : "preparation_time_desc";
+    } else if (sort_by === "createdAt" || sort_by === "created_at") {
+      sortKey = sort === "asc" ? "createdAt_asc" : "createdAt_desc";
     } else if (sort === "asc") {
       sortKey = "createdAt_asc";
+    } else if (sort === "desc") {
+      sortKey = "createdAt_desc";
     }
 
     const hasFavoriteFilter =
@@ -375,8 +414,16 @@ export const getAllMenu = async (request, reply) => {
             ${sortKey} = 'preparation_time_asc'
             AND (m.preparation_time, m.id) > (SELECT c.preparation_time, c.id FROM menu c WHERE c.id = ${cursorId})
           )
+          OR (
+            ${sortKey} = 'sort_order_asc'
+            AND (COALESCE(m.sort_order, 0), m.id) > (
+              SELECT COALESCE(c.sort_order, 0), c.id FROM menu c WHERE c.id = ${cursorId}
+            )
+          )
         )
       ORDER BY
+        CASE WHEN ${sortKey} = 'sort_order_asc' THEN COALESCE(m.sort_order, 0) END ASC,
+        CASE WHEN ${sortKey} = 'sort_order_asc' THEN m.id END ASC,
         CASE WHEN ${sortKey} = 'min_price_asc' THEN m.min_price END ASC NULLS LAST,
         CASE WHEN ${sortKey} = 'min_price_desc' THEN m.min_price END DESC NULLS LAST,
         CASE WHEN ${sortKey} = 'max_price_asc' THEN m.max_price END ASC NULLS LAST,
@@ -385,7 +432,7 @@ export const getAllMenu = async (request, reply) => {
         CASE WHEN ${sortKey} = 'preparation_time_desc' THEN m.preparation_time END DESC NULLS LAST,
         CASE WHEN ${sortKey} = 'createdAt_asc' THEN m."createdAt" END ASC,
         CASE WHEN ${sortKey} = 'createdAt_desc' THEN m."createdAt" END DESC,
-        m.id DESC
+        CASE WHEN ${sortKey} <> 'sort_order_asc' THEN m.id END DESC
       LIMIT ${take + 1}
     `
       .returnsRow({
@@ -608,6 +655,13 @@ export const updateMenu = async (request, reply) => {
       });
     }
 
+    if (
+      category_id &&
+      category_id !== existing.category_id
+    ) {
+      await setMenuSortOrder(id, await nextMenuSortOrder(category_id));
+    }
+
     if (request.files) {
       for (const file of request.files) {
         await db.menu_image.create({
@@ -729,6 +783,75 @@ export const deleteSingleImage = async (request, reply) => {
       success: true,
       message: "Image deleted successfully",
       data: { id },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const reorderMenus = async (request, reply) => {
+  try {
+    const rawIds = Array.isArray(request.body?.ids) ? request.body.ids : [];
+    const requested = [];
+    for (const value of rawIds) {
+      if (typeof value === "string" && value.trim()) {
+        requested.push(value.trim());
+      }
+    }
+
+    if (requested.length === 0) {
+      return reply.status(400).send({
+        success: false,
+        message: "ids is required!",
+      });
+    }
+
+    const categoryId =
+      typeof request.body?.category_id === "string"
+        ? request.body.category_id.trim()
+        : "";
+
+    const existingPlan = categoryId
+      ? prisma.raw.sql`
+          SELECT id
+          FROM menu
+          WHERE category_id = ${categoryId}
+          ORDER BY COALESCE(sort_order, 0) ASC, id ASC
+        `
+          .returnsRow({ id: "pg/text@1" })
+          .build()
+      : prisma.raw.sql`
+          SELECT id
+          FROM menu
+          ORDER BY COALESCE(sort_order, 0) ASC, id ASC
+        `
+          .returnsRow({ id: "pg/text@1" })
+          .build();
+
+    const existingRows = await prisma.runtime().query(existingPlan);
+    const existing = Array.isArray(existingRows)
+      ? existingRows.map((row) => row.id)
+      : [];
+    const existingSet = new Set(existing);
+    const seen = new Set();
+    const leading = [];
+    for (const id of requested) {
+      if (!existingSet.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      leading.push(id);
+    }
+    const ordered = leading.concat(existing.filter((id) => !seen.has(id)));
+
+    for (let index = 0; index < ordered.length; index += 1) {
+      await setMenuSortOrder(ordered[index], index + 1);
+    }
+
+    return reply.status(200).send({
+      success: true,
     });
   } catch (error) {
     request.log.error(error);

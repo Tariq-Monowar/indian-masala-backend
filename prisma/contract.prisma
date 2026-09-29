@@ -73,6 +73,7 @@ model menu {
   is_favorite Boolean @default(false)
   is_bestseller Boolean @default(false)
   is_available Boolean @default(true)
+  sort_order Int?
 
   menu_image menu_image[]
   order_item order_item[]
