@@ -83,11 +83,12 @@ export function mapUploadImages(
   for (const entry of images) {
     const row = entry as UploadImageRow | null | undefined;
     if (!row?.id || typeof row.image !== "string" || !row.image.trim()) continue;
-    const url = toUploadUrl(row.image, request);
+    const stored = row.image.trim();
+    const url = toUploadUrl(stored, request);
     if (!url) continue;
     next.push({
       id: row.id,
-      image: url,
+      image: stored,
       url,
     });
   }

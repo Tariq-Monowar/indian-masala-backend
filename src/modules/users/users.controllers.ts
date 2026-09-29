@@ -4,6 +4,11 @@ import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
 import { authOtpTemplate } from "../../notifications/email/templates/auth.otp";
 import { FileService } from "../../config/storage.config";
+import {
+  ensureCustomerAccount,
+  findCustomerByPhone,
+  phoneDigits,
+} from "./customer-account";
 
 export const createAdmin = async (request, reply) => {
   try {
@@ -118,44 +123,63 @@ export const adminLogin = async (request, reply) => {
 
 export const customerLogin = async (request, reply) => {
   try {
-    const { email } = request.body;
+    const { phone } = request.body;
+    const digits = phoneDigits(phone);
 
-    if (!email) {
+    if (digits.length < 6) {
       return reply.status(400).send({
         success: false,
-        message: "email is required!",
+        message: "phone is required!",
       });
     }
 
-    const plan = prisma.raw.sql`
-      SELECT name, email, phone
-      FROM "order"
-      WHERE lower(email) = lower(${email})
-      ORDER BY "createdAt" DESC
-      LIMIT 1
-    `
-      .returnsRow({
-        name: { codecId: "pg/text@1", nullable: true },
-        email: { codecId: "pg/text@1", nullable: true },
-        phone: { codecId: "pg/text@1", nullable: true },
-      })
-      .build();
-
-    const result = await prisma.runtime().query(plan);
-    const list = Array.isArray(result) ? result : [];
-    const customer = list[0];
+    let customer = await findCustomerByPhone(String(phone));
 
     if (!customer) {
-      return reply.status(404).send({
-        success: false,
-        message: "Customer not found",
+      const plan = prisma.raw.sql`
+        SELECT name, email, phone
+        FROM "order"
+        WHERE
+          regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g') = ${digits}
+          OR (
+            length(${digits}) >= 9
+            AND length(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g')) >= 9
+            AND right(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9)
+              = right(${digits}, 9)
+          )
+        ORDER BY "createdAt" DESC
+        LIMIT 1
+      `
+        .returnsRow({
+          name: { codecId: "pg/text@1", nullable: true },
+          email: { codecId: "pg/text@1", nullable: true },
+          phone: { codecId: "pg/text@1", nullable: true },
+        })
+        .build();
+
+      const result = await prisma.runtime().query(plan);
+      const list = Array.isArray(result) ? result : [];
+      const orderCustomer = list[0];
+
+      if (!orderCustomer?.phone) {
+        return reply.status(404).send({
+          success: false,
+          message: "Customer not found",
+        });
+      }
+
+      customer = await ensureCustomerAccount({
+        name: orderCustomer.name || "Guest",
+        phone: orderCustomer.phone,
+        email: orderCustomer.email,
       });
     }
 
     const token = jwt.sign(
       {
+        id: customer.id,
         name: customer.name,
-        email: customer.email,
+        email: customer.email || "",
         phone: customer.phone,
         role: "customer",
       },

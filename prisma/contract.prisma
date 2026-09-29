@@ -3,7 +3,7 @@
 model users {
   id        String    @id @default(uuid())
   name      String?
-  email     String    @unique
+  email     String?   @unique
   phone     String?
   password  String?
   image     String?
@@ -46,6 +46,7 @@ model category {
   name_en   String?
   name_fr   String?
   icon      String?
+  sort_order Int?
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }

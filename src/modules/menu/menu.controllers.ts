@@ -1,6 +1,22 @@
 import { db, prisma } from "../../../prisma/db";
 import { FileService } from "../../config/storage.config";
-import { toUploadUrl } from "../../utils/upload-url";
+import { mapUploadImages } from "../../utils/upload-url";
+
+function readPrice(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function resolveStoredPrices(min_price, max_price, existing = null) {
+  const incomingMin = readPrice(min_price);
+  const incomingMax = readPrice(max_price);
+  const price =
+    incomingMin ??
+    incomingMax ??
+    (existing ? (existing.min_price ?? existing.max_price) : null);
+  return { min_price: price, max_price: price };
+}
 
 export const createMenu = async (request, reply) => {
   try {
@@ -33,13 +49,15 @@ export const createMenu = async (request, reply) => {
       icon = category.icon;
     }
 
+    const prices = resolveStoredPrices(min_price, max_price);
+
     const menu = await db.menu.create({
       food_name,
       category_id,
       category_name,
       icon,
-      min_price: min_price ? Number(min_price) : null,
-      max_price: max_price ? Number(max_price) : null,
+      min_price: prices.min_price,
+      max_price: prices.max_price,
       preparation_time: preparation_time ? Number(preparation_time) : null,
       spicy_level,
       is_favorite:
@@ -81,12 +99,7 @@ export const createMenu = async (request, reply) => {
       .select("id", "image")
       .where({ menu_id: menu.id })
       .all();
-    const images: { id: string; image: string; url: string }[] = [];
-    for (const imageRow of imageRows || []) {
-      const url = toUploadUrl(imageRow.image, request);
-      if (!imageRow.id || !url) continue;
-      images.push({ id: imageRow.id, image: url, url });
-    }
+    const images = mapUploadImages(imageRows, request);
 
     return reply.status(201).send({
       success: true,
@@ -419,12 +432,7 @@ export const getAllMenu = async (request, reply) => {
     }[] = [];
     for (const row of page) {
       const imageRows = Array.isArray(row.images) ? row.images : [];
-      const images: { id: string; image: string; url: string }[] = [];
-      for (const imageRow of imageRows) {
-        const url = toUploadUrl(imageRow?.image, request);
-        if (!imageRow?.id || !url) continue;
-        images.push({ id: imageRow.id, image: url, url });
-      }
+      const images = mapUploadImages(imageRows, request);
       rows.push({ ...row, images });
     }
 
@@ -466,12 +474,7 @@ export const getSingleMenu = async (request, reply) => {
     }
 
     const imageRows = Array.isArray(menu.menu_image) ? menu.menu_image : [];
-    const images: { id: string; image: string; url: string }[] = [];
-    for (const imageRow of imageRows) {
-      const url = toUploadUrl(imageRow?.image, request);
-      if (!imageRow?.id || !url) continue;
-      images.push({ id: imageRow.id, image: url, url });
-    }
+    const images = mapUploadImages(imageRows, request);
 
     return reply.status(200).send({
       success: true,
@@ -552,13 +555,15 @@ export const updateMenu = async (request, reply) => {
       icon = category.icon;
     }
 
+    const prices = resolveStoredPrices(min_price, max_price, existing);
+
     const menu = await db.menu.where({ id }).update({
       food_name: food_name ?? existing.food_name,
       category_id: category_id ?? existing.category_id,
       category_name,
       icon,
-      min_price: min_price ? Number(min_price) : existing.min_price,
-      max_price: max_price ? Number(max_price) : existing.max_price,
+      min_price: prices.min_price,
+      max_price: prices.max_price,
       preparation_time: preparation_time
         ? Number(preparation_time)
         : existing.preparation_time,
@@ -616,12 +621,7 @@ export const updateMenu = async (request, reply) => {
       .select("id", "image")
       .where({ menu_id: id })
       .all();
-    const images: { id: string; image: string; url: string }[] = [];
-    for (const imageRow of imageRows || []) {
-      const url = toUploadUrl(imageRow.image, request);
-      if (!imageRow.id || !url) continue;
-      images.push({ id: imageRow.id, image: url, url });
-    }
+    const images = mapUploadImages(imageRows, request);
 
     return reply.status(200).send({
       success: true,

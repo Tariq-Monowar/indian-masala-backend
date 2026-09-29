@@ -3,6 +3,7 @@ import {
   createCategory,
   getAllCategory,
   updateCategory,
+  reorderCategories,
   deleteCategoryBulk,
 } from "./category.controllers";
 
@@ -24,6 +25,12 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
    * {{_baseUrl}}/api/menu/category/update/:id
   */
   fastify.patch("/update/:id", updateCategory);
+
+  /*
+   * reorder categories
+   * {{_baseUrl}}/api/menu/category/reorder
+  */
+  fastify.patch("/reorder", reorderCategories);
 
   /*
    * delete category bulk

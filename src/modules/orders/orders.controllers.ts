@@ -2,6 +2,11 @@ import jwt from "jsonwebtoken";
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
 import { markObjectNotificationsRead } from "../../notifications/in_app/mark-handled";
+import {
+  ensureCustomerAccount,
+  normalizeOptionalEmail,
+  phoneDigits,
+} from "../users/customer-account";
 
 export const createOrder = async (request, reply) => {
   try {
@@ -13,13 +18,14 @@ export const createOrder = async (request, reply) => {
         .send({ success: false, message: "name is required!" });
     }
 
-    if (!email) {
+    const customerEmail = normalizeOptionalEmail(email);
+    if (customerEmail === null) {
       return reply
         .status(400)
-        .send({ success: false, message: "email is required!" });
+        .send({ success: false, message: "email is invalid!" });
     }
 
-    if (!phone) {
+    if (!phone || phoneDigits(phone).length < 6) {
       return reply
         .status(400)
         .send({ success: false, message: "phone is required!" });
@@ -84,10 +90,17 @@ export const createOrder = async (request, reply) => {
       "0",
     );
 
+    const customer = await ensureCustomerAccount({
+      name,
+      phone: String(phone).trim(),
+      email: customerEmail,
+    });
+
     const order = await db.order.create({
       name,
-      email,
-      phone,
+      email: customerEmail || null,
+      phone: String(phone).trim(),
+      user_id: customer.id,
       order_number,
       total_price,
       status: "pending",
@@ -109,9 +122,10 @@ export const createOrder = async (request, reply) => {
 
     const token = jwt.sign(
       {
-        name,
-        email,
-        phone,
+        id: customer.id,
+        name: customer.name || name,
+        email: customer.email || customerEmail || "",
+        phone: customer.phone || String(phone).trim(),
         role: "customer",
       },
       process.env.JWT_SECRET as string,
@@ -155,13 +169,14 @@ export const getAllOrders = async (request, reply) => {
     const pinnedId = object_id || "";
     const orderNumberFilter = order_number || "";
     const tokenUser = request.user || {};
-    const emailFilter =
-      tokenUser.role === "customer" ? tokenUser.email || "" : email || "";
+    const emailFilter = tokenUser.role === "customer" ? "" : email || "";
+    const phoneFilter =
+      tokenUser.role === "customer" ? phoneDigits(tokenUser.phone) : "";
 
-    if (tokenUser.role === "customer" && !emailFilter) {
+    if (tokenUser.role === "customer" && phoneFilter.length < 6) {
       return reply.status(400).send({
         success: false,
-        message: "email is required!",
+        message: "phone is required!",
       });
     }
     const useStart = started_date ? 1 : 0;
@@ -245,6 +260,16 @@ export const getAllOrders = async (request, reply) => {
         AND (
           ${emailFilter} = ''
           OR lower(COALESCE(o.email, u.email, '')) = lower(${emailFilter})
+        )
+        AND (
+          ${phoneFilter} = ''
+          OR regexp_replace(COALESCE(o.phone, u.phone, ''), '[^0-9]', '', 'g') = ${phoneFilter}
+          OR (
+            length(${phoneFilter}) >= 9
+            AND length(regexp_replace(COALESCE(o.phone, u.phone, ''), '[^0-9]', '', 'g')) >= 9
+            AND right(regexp_replace(COALESCE(o.phone, u.phone, ''), '[^0-9]', '', 'g'), 9)
+              = right(${phoneFilter}, 9)
+          )
         )
         AND (
           ${orderNumberFilter} = ''

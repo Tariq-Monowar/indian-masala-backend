@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'da2bf417523346874b04907ef6d14c880efb64bca932dd714468f34035145d84'>;
+  StorageHashBase<'0a668c02a17c8553e8c7084a460c92f0dd83b7ba0f2a3110432b5f593117a5c0'>;
 export type ExecutionHash =
   ExecutionHashBase<'72cd0e075fb67463932d234a1d3431c94fb57ecd2bd1b63384e5323e56a70ad7'>;
 export type ProfileHash =
@@ -359,7 +359,7 @@ export type FieldOutputTypes = {
     readonly users: {
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly name: CodecTypes['pg/text@1']['output'] | null;
-      readonly email: CodecTypes['pg/text@1']['output'];
+      readonly email: CodecTypes['pg/text@1']['output'] | null;
       readonly phone: CodecTypes['pg/text@1']['output'] | null;
       readonly password: CodecTypes['pg/text@1']['output'] | null;
       readonly image: CodecTypes['pg/text@1']['output'] | null;
@@ -489,7 +489,7 @@ export type FieldInputTypes = {
     readonly users: {
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly name: CodecTypes['pg/text@1']['input'] | null;
-      readonly email: CodecTypes['pg/text@1']['input'];
+      readonly email: CodecTypes['pg/text@1']['input'] | null;
       readonly phone: CodecTypes['pg/text@1']['input'] | null;
       readonly password: CodecTypes['pg/text@1']['input'] | null;
       readonly image: CodecTypes['pg/text@1']['input'] | null;
@@ -618,7 +618,7 @@ export type StorageColumnTypes = {
     };
     readonly users: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
-      readonly email: CodecTypes['pg/text@1']['output'];
+      readonly email: CodecTypes['pg/text@1']['output'] | null;
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly image: CodecTypes['pg/text@1']['output'] | null;
       readonly name: CodecTypes['pg/text@1']['output'] | null;
@@ -748,7 +748,7 @@ export type StorageColumnInputTypes = {
     };
     readonly users: {
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
-      readonly email: CodecTypes['pg/text@1']['input'];
+      readonly email: CodecTypes['pg/text@1']['input'] | null;
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly image: CodecTypes['pg/text@1']['input'] | null;
       readonly name: CodecTypes['pg/text@1']['input'] | null;
@@ -1509,7 +1509,7 @@ type ContractBase = Omit<
                 readonly email: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
-                  readonly nullable: false;
+                  readonly nullable: true;
                 };
                 readonly phone: {
                   readonly nativeType: 'text';
@@ -2400,7 +2400,7 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly email: {
-                readonly nullable: false;
+                readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly phone: {

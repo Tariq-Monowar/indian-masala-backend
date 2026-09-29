@@ -20,6 +20,30 @@ export const createCategory = async (request, reply) => {
       icon: icon || null,
     });
 
+    const nextOrderPlan = prisma.raw.sql`
+      SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order
+      FROM category
+    `
+      .returnsRow({
+        next_order: "pg/int4@1",
+      })
+      .build();
+    const nextOrderRows = await prisma.runtime().query(nextOrderPlan);
+    const nextOrder = Array.isArray(nextOrderRows)
+      ? Number(nextOrderRows[0]?.next_order) || 1
+      : 1;
+    const placePlan = prisma.raw.sql`
+      UPDATE category
+      SET sort_order = ${nextOrder}
+      WHERE id = ${category.id}
+      RETURNING id
+    `
+      .returnsRow({
+        id: "pg/text@1",
+      })
+      .build();
+    await prisma.runtime().query(placePlan);
+
     return reply.status(201).send({
       success: true,
       data: {
@@ -67,9 +91,13 @@ export const getAllCategory = async (request, reply) => {
         )
         AND (
           ${cursorId} = ''
-          OR c.id > ${cursorId}
+          OR (COALESCE(c.sort_order, 0), c.id) > (
+            SELECT COALESCE(s.sort_order, 0), s.id
+            FROM category s
+            WHERE s.id = ${cursorId}
+          )
         )
-      ORDER BY c.id ASC
+      ORDER BY COALESCE(c.sort_order, 0) ASC, c.id ASC
       LIMIT ${take + 1}
     `
       .returnsRow({
@@ -194,6 +222,72 @@ export const updateCategory = async (request, reply) => {
         createdAt: category.createdAt,
         updatedAt: category.updatedAt,
       },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const reorderCategories = async (request, reply) => {
+  try {
+    const rawIds = Array.isArray(request.body?.ids) ? request.body.ids : [];
+    const requested = [];
+    for (const value of rawIds) {
+      if (typeof value === "string" && value.trim()) {
+        requested.push(value.trim());
+      }
+    }
+
+    if (requested.length === 0) {
+      return reply.status(400).send({
+        success: false,
+        message: "ids is required!",
+      });
+    }
+
+    const existingPlan = prisma.raw.sql`
+      SELECT id
+      FROM category
+      ORDER BY COALESCE(sort_order, 0) ASC, id ASC
+    `
+      .returnsRow({
+        id: "pg/text@1",
+      })
+      .build();
+    const existingRows = await prisma.runtime().query(existingPlan);
+    const existing = Array.isArray(existingRows)
+      ? existingRows.map((row) => row.id)
+      : [];
+    const existingSet = new Set(existing);
+    const seen = new Set();
+    const leading = [];
+    for (const id of requested) {
+      if (!existingSet.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      leading.push(id);
+    }
+    const ordered = leading.concat(existing.filter((id) => !seen.has(id)));
+
+    for (let index = 0; index < ordered.length; index += 1) {
+      const placePlan = prisma.raw.sql`
+        UPDATE category
+        SET sort_order = ${index + 1}
+        WHERE id = ${ordered[index]}
+        RETURNING id
+      `
+        .returnsRow({
+          id: "pg/text@1",
+        })
+        .build();
+      await prisma.runtime().query(placePlan);
+    }
+
+    return reply.status(200).send({
+      success: true,
     });
   } catch (error) {
     request.log.error(error);
