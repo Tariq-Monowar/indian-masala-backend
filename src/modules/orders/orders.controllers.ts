@@ -3,20 +3,6 @@ import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
 import { markObjectNotificationsRead } from "../../notifications/in_app/mark-handled";
 
-const nextOrderNumber = async () => {
-  const plan = prisma.raw.sql`
-    SELECT COUNT(*)::int AS total FROM "order"
-  `
-    .returnsRow({
-      total: "pg/int4@1",
-    })
-    .build();
-  const result = await prisma.runtime().query(plan);
-  const list = Array.isArray(result) ? result : [];
-  const total = Number(list[0]?.total || 0);
-  return String(total + 1).padStart(4, "0");
-};
-
 export const createOrder = async (request, reply) => {
   try {
     const { name, email, phone, order_item } = request.body || {};
@@ -46,7 +32,7 @@ export const createOrder = async (request, reply) => {
     }
 
     let total_price = 0;
-    const lines: any[] = [];
+    const lines: { menu_id: string; unit_price: number; quantity: number }[] = [];
 
     for (const item of order_item) {
       if (!item.id || !item.quantity) {
@@ -84,9 +70,21 @@ export const createOrder = async (request, reply) => {
       });
     }
 
-    const order_number = await nextOrderNumber();
+    const numberPlan = prisma.raw.sql`
+      SELECT COUNT(*)::int AS total FROM "order"
+    `
+      .returnsRow({
+        total: "pg/int4@1",
+      })
+      .build();
+    const numberResult = await prisma.runtime().query(numberPlan);
+    const numberList = Array.isArray(numberResult) ? numberResult : [];
+    const order_number = String(Number(numberList[0]?.total || 0) + 1).padStart(
+      4,
+      "0",
+    );
 
-    const order = await (db as any).order.create({
+    const order = await db.order.create({
       name,
       email,
       phone,
@@ -96,7 +94,7 @@ export const createOrder = async (request, reply) => {
     });
 
     for (const line of lines) {
-      await (db as any).order_item.create({ order_id: order.id, ...line });
+      await db.order_item.create({ order_id: order.id, ...line });
     }
 
     void notify({
@@ -480,9 +478,9 @@ export const updateOrderStatus = async (request, reply) => {
     }
 
     for (const id of ids) {
-      const existing = await (db as any).order.where({ id }).first();
+      const existing = await db.order.where({ id }).first();
       if (!existing) continue;
-      await (db as any).order.where({ id }).update({ status });
+      await db.order.where({ id }).update({ status });
     }
 
     if (status !== "pending") {
@@ -513,7 +511,7 @@ export const deleteOrderBulk = async (request, reply) => {
     }
 
     for (const id of ids) {
-      await (db as any).order.where({ id }).delete();
+      await db.order.where({ id }).delete();
     }
 
     await markObjectNotificationsRead(ids);
