@@ -60,6 +60,15 @@ app.register(fastifyStatic, {
   prefix: "/uploads/",
 });
 
+app.register(fastifyStatic, {
+  root: path.join(
+    import.meta.dirname,
+    "src/notifications/email/assets",
+  ),
+  prefix: "/email-assets/",
+  decorateReply: false,
+});
+
 app.setNotFoundHandler((request, reply) => {
   reply.status(404).send({
     statusCode: 404,

@@ -8,21 +8,29 @@ function escapeHtml(value) {
 
 const FONT = "'Segoe UI', Helvetica, Arial, sans-serif";
 
+function emailAsset(filename: string) {
+  const configured = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  const base = configured.startsWith("https://")
+    ? configured
+    : "https://backend.indianmasala.fr";
+  return `${base}/email-assets/${filename}`;
+}
+
 const SOCIAL = [
   {
-    cid: "social-facebook",
+    file: "social-facebook.png",
     label: "Facebook",
-    href: "https://www.facebook.com/share/1DC9LxWAMB/?mibextid=wwXIfr",
+    href: "https://www.facebook.com/share/1DC9LxWAMB/",
   },
   {
-    cid: "social-instagram",
+    file: "social-instagram.png",
     label: "Instagram",
-    href: "https://www.instagram.com/indianmasala.saintjulien?igsi=ZDNlbnEwbGd3MXZw&utm_source=qr",
+    href: "https://www.instagram.com/indianmasala.saintjulien/",
   },
   {
-    cid: "social-website",
+    file: "social-website.png",
     label: "Website",
-    href: "https://www.indianmasala.com/",
+    href: "https://indianmasala.fr/",
   },
 ];
 
@@ -58,7 +66,7 @@ function iconLink(item) {
   return `
     <td align="center" style="padding:0 8px;">
       <a href="${escapeHtml(item.href)}" style="text-decoration:none;">
-        <img src="cid:${item.cid}" alt="${escapeHtml(item.label)}" width="36" height="36" style="display:block;border:0;outline:none;width:36px;height:36px;" />
+        <img src="${escapeHtml(emailAsset(item.file))}" alt="${escapeHtml(item.label)}" width="36" height="36" style="display:block;border:0;outline:none;width:36px;height:36px;" />
       </a>
       <p style="margin:6px 0 0;font-family:${FONT};font-size:11px;line-height:1.2;color:#6B5A4E;">
         <a href="${escapeHtml(item.href)}" style="color:#6B5A4E;text-decoration:none;">${escapeHtml(item.label)}</a>
@@ -69,7 +77,7 @@ function iconLink(item) {
 
 function footerLinks(address) {
   const location = {
-    cid: "social-location",
+    file: "social-location.png",
     label: "Location",
     href: mapsHref(address),
   };
@@ -133,7 +141,7 @@ export function confirmationEmailTemplate({
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;">
             <tr>
               <td align="center" style="padding:36px 36px 0;">
-                <img src="cid:indian-masala-logo" alt="${escapeHtml(brand)}" width="52" height="59" style="display:block;margin:0 auto 10px;border:0;outline:none;width:52px;height:auto;" />
+                <img src="${escapeHtml(emailAsset("nav_logo.png"))}" alt="${escapeHtml(brand)}" width="52" height="59" style="display:block;margin:0 auto 10px;border:0;outline:none;width:52px;height:auto;" />
                 <p style="margin:0;font-family:${FONT};font-size:13px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#D26F19;">
                   ${escapeHtml(brand)}
                 </p>
