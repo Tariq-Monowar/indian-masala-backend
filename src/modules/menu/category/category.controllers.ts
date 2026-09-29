@@ -138,9 +138,11 @@ export const getAllCategory = async (request, reply) => {
     });
   } catch (error) {
     request.log.error(error);
+    const detail = error instanceof Error ? error.message : "Unknown error";
     return reply.status(500).send({
       success: false,
       message: "Internal server error",
+      detail,
     });
   }
 };
