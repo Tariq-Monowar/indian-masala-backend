@@ -10,6 +10,8 @@ import routes from "./src/modules";
 const app = Fastify({ logger: true });
 
 export const frontendOrigin = [
+  "https://indianmasala.fr",
+  "https://www.indianmasala.fr",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "http://localhost:5173",

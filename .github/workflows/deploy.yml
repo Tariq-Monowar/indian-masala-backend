@@ -18,7 +18,8 @@ jobs:
           script: |
             set -e
             cd /var/www/backend
-            git pull origin main
-            npm install
+            git fetch origin main
+            git reset --hard origin/main
+            npm ci
             node scripts/ensure-order-tables.mjs
             pm2 restart indian-masala
