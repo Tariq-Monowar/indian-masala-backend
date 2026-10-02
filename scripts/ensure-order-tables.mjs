@@ -80,6 +80,14 @@ await c.query(`ALTER TABLE menu ADD COLUMN IF NOT EXISTS sort_order integer`);
 await c.query(
   `ALTER TABLE company_info ADD COLUMN IF NOT EXISTS whatsapp_numbers text`,
 );
+await c.query(
+  `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS is_special boolean NOT NULL DEFAULT false`,
+);
+await c.query(`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS pickup_date text`);
+await c.query(`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS pickup_time text`);
+await c.query(
+  `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS special_request text`,
+);
 
 await c.query(`
   WITH ranked AS (

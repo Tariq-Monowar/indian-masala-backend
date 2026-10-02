@@ -5,9 +5,9 @@
   "main": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch index.ts",
-    "build": "tsc",
-    "start": "tsx index.ts",
+    "dev": "node api.js && tsx watch index.ts",
+    "build": "node api.js && tsc",
+    "start": "node api.js && tsx index.ts",
     "prisma:emit": "prisma contract emit",
     "postinstall": "prisma contract emit",
     "push": "smart-git-push"

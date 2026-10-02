@@ -1,5 +1,33 @@
 import { prisma } from "../../prisma/db";
 
+/** Pickup date, time, and note for optional special orders. */
+export async function ensureOrderSpecialColumns() {
+  await prisma.runtime().query(
+    prisma.raw
+      .sql`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS is_special boolean NOT NULL DEFAULT false`
+      .affectedCount()
+      .build(),
+  );
+  await prisma.runtime().query(
+    prisma.raw
+      .sql`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS pickup_date text`
+      .affectedCount()
+      .build(),
+  );
+  await prisma.runtime().query(
+    prisma.raw
+      .sql`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS pickup_time text`
+      .affectedCount()
+      .build(),
+  );
+  await prisma.runtime().query(
+    prisma.raw
+      .sql`ALTER TABLE "order" ADD COLUMN IF NOT EXISTS special_request text`
+      .affectedCount()
+      .build(),
+  );
+}
+
 /** Adds position columns the live database was missing, then backfills them. */
 export async function ensureSortColumns() {
   await prisma.runtime().query(
@@ -20,6 +48,7 @@ export async function ensureSortColumns() {
       .affectedCount()
       .build(),
   );
+  await ensureOrderSpecialColumns();
   await prisma.runtime().query(
     prisma.raw.sql`
       WITH ranked AS (

@@ -7,10 +7,64 @@ import {
   normalizeOptionalEmail,
   phoneDigits,
 } from "../users/customer-account";
+import { ensureOrderSpecialColumns } from "../../utils/ensure-sort-columns";
+
+let specialColumnsReady: Promise<void> | null = null;
+
+function readySpecialColumns() {
+  specialColumnsReady ??= ensureOrderSpecialColumns().catch((error) => {
+    specialColumnsReady = null;
+    throw error;
+  });
+  return specialColumnsReady;
+}
+
+function parisToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+  }).format(new Date());
+}
+
+function readSpecialOrder(body) {
+  const isSpecial = body?.is_special === true || body?.is_special === "true";
+  if (!isSpecial) {
+    return {
+      isSpecial: false,
+      pickupDate: "",
+      pickupTime: "",
+      specialRequest: "",
+      error: "",
+    };
+  }
+
+  const pickupDate = String(body?.pickup_date || "").trim();
+  const pickupTime = String(body?.pickup_time || "").trim();
+  const specialRequest = String(body?.special_request || "").trim().slice(0, 500);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) || pickupDate < parisToday()) {
+    return { error: "pickup date is required" };
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
+    return { error: "pickup time is required" };
+  }
+
+  return {
+    isSpecial: true,
+    pickupDate,
+    pickupTime,
+    specialRequest,
+    error: "",
+  };
+}
 
 export const createOrder = async (request, reply) => {
   try {
+    await readySpecialColumns();
     const { name, email, phone, order_item } = request.body || {};
+    const special = readSpecialOrder(request.body);
+    if (special.error) {
+      return reply.status(400).send({ success: false, message: special.error });
+    }
 
     if (!name) {
       return reply
@@ -110,10 +164,30 @@ export const createOrder = async (request, reply) => {
       await db.order_item.create({ order_id: order.id, ...line });
     }
 
+    const specialFlag = special.isSpecial ? "1" : "0";
+    await prisma.runtime().query(
+      prisma.raw.sql`
+        UPDATE "order"
+        SET is_special = (${specialFlag} = '1'),
+            pickup_date = ${special.pickupDate},
+            pickup_time = ${special.pickupTime},
+            special_request = ${special.specialRequest}
+        WHERE id = ${order.id}
+      `
+        .affectedCount()
+        .build(),
+    );
+
+    const specialNote = special.isSpecial
+      ? ` Special pickup ${special.pickupDate} ${special.pickupTime}${
+          special.specialRequest ? `: ${special.specialRequest}` : ""
+        }.`
+      : "";
+
     void notify({
       io: request.server.io,
       inApp: {
-        message: `New order #${order_number} from ${name} for ${total_price} with ${lines.length} item(s).`,
+        message: `New order #${order_number} from ${name} for ${total_price} with ${lines.length} item(s).${specialNote}`,
         type: "new_order",
         object_id: order.id,
         role: "admin",
@@ -148,6 +222,7 @@ export const createOrder = async (request, reply) => {
 
 export const getAllOrders = async (request, reply) => {
   try {
+    await readySpecialColumns();
     const {
       cursor,
       limit,
@@ -158,6 +233,7 @@ export const getAllOrders = async (request, reply) => {
       object_id,
       email,
       order_number,
+      special,
     } = request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
@@ -179,6 +255,7 @@ export const getAllOrders = async (request, reply) => {
         message: "phone is required!",
       });
     }
+    const specialOnly = special === "1" || special === "true" ? "1" : "0";
     const useStart = started_date ? 1 : 0;
     const startDate = started_date || "1970-01-01";
     const useEnd = end_date ? 1 : 0;
@@ -193,6 +270,10 @@ export const getAllOrders = async (request, reply) => {
         COALESCE(o.phone, u.phone) AS phone,
         o.total_price,
         o.status,
+        COALESCE(o.is_special, false) AS is_special,
+        o.pickup_date,
+        o.pickup_time,
+        o.special_request,
         o."createdAt",
         COALESCE(
           (
@@ -228,6 +309,7 @@ export const getAllOrders = async (request, reply) => {
             COALESCE(o.phone, u.phone, '') || ' ' ||
             regexp_replace(COALESCE(o.phone, u.phone, ''), '[^0-9]', '', 'g') || ' ' ||
             COALESCE(o.status, '') || ' ' ||
+            COALESCE(o.special_request, '') || ' ' ||
             COALESCE(o.total_price::text, '') || ' ' ||
             COALESCE(
               (
@@ -280,6 +362,10 @@ export const getAllOrders = async (request, reply) => {
           OR o.id = ${pinnedId}
         )
         AND (
+          ${specialOnly} = '0'
+          OR COALESCE(o.is_special, false) = true
+        )
+        AND (
           ${useStart} = 0
           OR (o."createdAt" AT TIME ZONE 'Europe/Paris')::date >= ${startDate}::date
         )
@@ -307,6 +393,10 @@ export const getAllOrders = async (request, reply) => {
         phone: { codecId: "pg/text@1", nullable: true },
         total_price: { codecId: "pg/float8@1", nullable: true },
         status: { codecId: "pg/text@1", nullable: true },
+        is_special: "pg/bool@1",
+        pickup_date: { codecId: "pg/text@1", nullable: true },
+        pickup_time: { codecId: "pg/text@1", nullable: true },
+        special_request: { codecId: "pg/text@1", nullable: true },
         createdAt: "pg/timestamptz-string@1",
         order: "pg/json@1",
       })
@@ -382,6 +472,7 @@ export const getOrderStatus = async (request, reply) => {
 
 export const getSingleOrder = async (request, reply) => {
   try {
+    await readySpecialColumns();
     const { id, order_number } = request.query;
     const orderId = id || "";
     const orderNumber = order_number || "";
@@ -399,6 +490,10 @@ export const getSingleOrder = async (request, reply) => {
         o.order_number,
         o.total_price,
         o.status,
+        COALESCE(o.is_special, false) AS is_special,
+        o.pickup_date,
+        o.pickup_time,
+        o.special_request,
         o."createdAt",
         COALESCE(o.name, u.name) AS customer_name,
         COALESCE(o.email, u.email) AS customer_email,
@@ -435,6 +530,10 @@ export const getSingleOrder = async (request, reply) => {
         order_number: { codecId: "pg/text@1", nullable: true },
         total_price: { codecId: "pg/float8@1", nullable: true },
         status: { codecId: "pg/text@1", nullable: true },
+        is_special: "pg/bool@1",
+        pickup_date: { codecId: "pg/text@1", nullable: true },
+        pickup_time: { codecId: "pg/text@1", nullable: true },
+        special_request: { codecId: "pg/text@1", nullable: true },
         createdAt: "pg/timestamptz-string@1",
         customer_name: { codecId: "pg/text@1", nullable: true },
         customer_email: { codecId: "pg/text@1", nullable: true },
@@ -466,6 +565,10 @@ export const getSingleOrder = async (request, reply) => {
         orders: row.orders,
         total_price: row.total_price,
         status: row.status,
+        is_special: row.is_special === true,
+        pickup_date: row.pickup_date || "",
+        pickup_time: row.pickup_time || "",
+        special_request: row.special_request || "",
         createdAt: row.createdAt,
       },
     });
