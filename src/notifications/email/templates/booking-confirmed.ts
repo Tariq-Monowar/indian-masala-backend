@@ -35,26 +35,30 @@ type CompanyEmailInfo = {
 async function loadCompany(db): Promise<CompanyEmailInfo> {
   try {
     const rows = await db.company_info
-      .select(
-        "company_name",
-        "company_phone",
-        "address",
-        "city",
-        "country",
-        "location_label",
-      )
+      .select("company_name", "company_phone", "address")
       .limit(1)
       .all();
     const info = rows?.[0];
     if (!info) return {};
-    const address = [info.address, info.city, info.country]
-      .map((part) => (typeof part === "string" ? part.trim() : ""))
-      .filter(Boolean)
-      .join(", ");
+    const address =
+      typeof info.address === "string" ? info.address.trim() : "";
+    const storedPhone =
+      typeof info.company_phone === "string" ? info.company_phone.trim() : "";
+    let companyPhone = storedPhone;
+    if (storedPhone.startsWith("[")) {
+      try {
+        const list = JSON.parse(storedPhone);
+        companyPhone = Array.isArray(list)
+          ? String(list.find((item) => String(item || "").trim()) || "").trim()
+          : storedPhone;
+      } catch {
+        companyPhone = storedPhone;
+      }
+    }
     return {
       companyName: info.company_name || "Indian Masala",
-      companyPhone: info.company_phone || "",
-      companyAddress: address || info.location_label || "",
+      companyPhone,
+      companyAddress: address,
     };
   } catch {
     return {};

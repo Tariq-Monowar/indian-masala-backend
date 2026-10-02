@@ -15,6 +15,12 @@ export async function ensureSortColumns() {
       .build(),
   );
   await prisma.runtime().query(
+    prisma.raw
+      .sql`ALTER TABLE company_info ADD COLUMN IF NOT EXISTS whatsapp_numbers text`
+      .affectedCount()
+      .build(),
+  );
+  await prisma.runtime().query(
     prisma.raw.sql`
       WITH ranked AS (
         SELECT id,
