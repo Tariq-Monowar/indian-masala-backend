@@ -12,6 +12,7 @@ import {
   verifyCurrentEmailOtp,
   sendNewEmailOtp,
   confirmEmailChange,
+  updateAdminProfile,
   checkAuth,
 } from "./users.controllers";
 import { verifyUser } from "../../middleware/auth.middleware";
@@ -99,6 +100,12 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     "/change-email/confirm",
     { preHandler: [verifyUser("admin")] },
     confirmEmailChange,
+  );
+
+  fastify.post(
+    "/profile",
+    { preHandler: [verifyUser("admin"), upload.single("image")] },
+    updateAdminProfile,
   );
 
   /*

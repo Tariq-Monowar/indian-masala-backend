@@ -839,6 +839,74 @@ export const confirmEmailChange = async (request, reply) => {
   }
 };
 
+export const updateAdminProfile = async (request, reply) => {
+  try {
+    const { id } = request.user;
+    const name = String(request.body?.name ?? "").trim();
+    const phone = String(request.body?.phone ?? "").trim();
+    const removeImage = String(request.body?.remove_image ?? "") === "true";
+
+    if (name.length < 2) {
+      FileService.removeFile(request.file);
+      return reply.status(400).send({
+        success: false,
+        message: "Name must be at least 2 characters",
+      });
+    }
+
+    const user = await db.users.where({ id }).first();
+    if (!user) {
+      FileService.removeFile(request.file);
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    let image = user.image ?? null;
+    if (request.file?.filename) {
+      if (image && image !== request.file.filename) {
+        FileService.removeFile(image);
+      }
+      image = request.file.filename;
+    } else if (removeImage) {
+      if (image) FileService.removeFile(image);
+      image = null;
+    }
+
+    const updated = await db.users.where({ id }).update({
+      name,
+      phone: phone || null,
+      image,
+    });
+
+    if (!updated) {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      message: "Profile updated",
+      data: {
+        name: updated.name || name,
+        email: updated.email || user.email,
+        phone: phone || null,
+        image,
+      },
+    });
+  } catch (error) {
+    FileService.removeFile(request.file);
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export const checkAuth = async (request, reply) => {
   try {
     const { id } = request.user;
