@@ -118,8 +118,14 @@ export const getAllContectUs = async (request, reply) => {
               LIKE ${digitPattern}
           )
         )
-        AND (${useStart} = 0 OR c."createdAt" >= ${startDate}::date)
-        AND (${useEnd} = 0 OR c."createdAt" < (${endDate}::date + interval '1 day'))
+        AND (
+          ${useStart} = 0
+          OR (c."createdAt" AT TIME ZONE 'Europe/Paris')::date >= ${startDate}::date
+        )
+        AND (
+          ${useEnd} = 0
+          OR (c."createdAt" AT TIME ZONE 'Europe/Paris')::date <= ${endDate}::date
+        )
         AND (
           ${pinnedId} = ''
           OR c.id = ${pinnedId}

@@ -173,8 +173,14 @@ export const getAllCatering = async (request, reply) => {
             FROM unnest(string_to_array(${statusCsv}, ',')) AS s
           )
         )
-        AND (${useStart} = 0 OR c."createdAt" >= ${startDate}::date)
-        AND (${useEnd} = 0 OR c."createdAt" < (${endDate}::date + interval '1 day'))
+        AND (
+          ${useStart} = 0
+          OR (c."createdAt" AT TIME ZONE 'Europe/Paris')::date >= ${startDate}::date
+        )
+        AND (
+          ${useEnd} = 0
+          OR (c."createdAt" AT TIME ZONE 'Europe/Paris')::date <= ${endDate}::date
+        )
         AND (
           ${pinnedId} = ''
           OR c.id = ${pinnedId}

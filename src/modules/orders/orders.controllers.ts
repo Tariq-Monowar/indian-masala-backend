@@ -279,8 +279,14 @@ export const getAllOrders = async (request, reply) => {
           ${pinnedId} = ''
           OR o.id = ${pinnedId}
         )
-        AND (${useStart} = 0 OR o."createdAt" >= ${startDate}::date)
-        AND (${useEnd} = 0 OR o."createdAt" < (${endDate}::date + interval '1 day'))
+        AND (
+          ${useStart} = 0
+          OR (o."createdAt" AT TIME ZONE 'Europe/Paris')::date >= ${startDate}::date
+        )
+        AND (
+          ${useEnd} = 0
+          OR (o."createdAt" AT TIME ZONE 'Europe/Paris')::date <= ${endDate}::date
+        )
         AND (
           ${cursorId} = ''
           OR NOT EXISTS (SELECT 1 FROM "order" c WHERE c.id = ${cursorId})
