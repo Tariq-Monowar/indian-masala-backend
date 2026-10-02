@@ -8,6 +8,10 @@ import {
   forgotPasswordReset,
   forgotPasswordRecentOtp,
   changePassword,
+  sendCurrentEmailOtp,
+  verifyCurrentEmailOtp,
+  sendNewEmailOtp,
+  confirmEmailChange,
   checkAuth,
 } from "./users.controllers";
 import { verifyUser } from "../../middleware/auth.middleware";
@@ -71,6 +75,30 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     "/change-password",
     { preHandler: [verifyUser("admin")] },
     changePassword,
+  );
+
+  fastify.post(
+    "/change-email/send-current",
+    { preHandler: [verifyUser("admin")] },
+    sendCurrentEmailOtp,
+  );
+
+  fastify.post(
+    "/change-email/verify-current",
+    { preHandler: [verifyUser("admin")] },
+    verifyCurrentEmailOtp,
+  );
+
+  fastify.post(
+    "/change-email/send-new",
+    { preHandler: [verifyUser("admin")] },
+    sendNewEmailOtp,
+  );
+
+  fastify.post(
+    "/change-email/confirm",
+    { preHandler: [verifyUser("admin")] },
+    confirmEmailChange,
   );
 
   /*

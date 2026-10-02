@@ -2,7 +2,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { db, prisma } from "../../../prisma/db";
 import { notify } from "../../notifications";
-import { authOtpTemplate } from "../../notifications/email/templates/auth.otp";
+import {
+  authOtpTemplate,
+  emailChangeOtpTemplate,
+} from "../../notifications/email/templates/auth.otp";
 import { FileService } from "../../config/storage.config";
 import {
   ensureCustomerAccount,
@@ -477,6 +480,355 @@ export const changePassword = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       message: "Password changed successfully",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const EMAIL_CHANGE_SECONDS = 5 * 60;
+const EMAIL_CHANGE_SESSION_SECONDS = 15 * 60;
+const emailChangeMemory = new Map();
+
+function emailChangeKey(userId) {
+  return `admin-email-change:${userId}`;
+}
+
+function blankEmailChange() {
+  return {
+    current_email: "",
+    current_verified: "false",
+    new_email: "",
+    otp: "",
+    expiration: "",
+  };
+}
+
+function readEmailChangeMemory(key) {
+  const row = emailChangeMemory.get(key);
+  if (!row) return null;
+  if (row.expiresAt <= Date.now()) {
+    emailChangeMemory.delete(key);
+    return null;
+  }
+  return row.fields;
+}
+
+function writeEmailChangeMemory(key, fields, ttlSeconds) {
+  const current = readEmailChangeMemory(key) || blankEmailChange();
+  emailChangeMemory.set(key, {
+    fields: { ...current, ...fields },
+    expiresAt: Date.now() + ttlSeconds * 1000,
+  });
+}
+
+async function readEmailChange(redis, key) {
+  const local = readEmailChangeMemory(key);
+  if (local) return local;
+  if (redis?.status !== "ready") return null;
+  try {
+    const saved = await redis.hgetall(key);
+    if (saved && Object.keys(saved).length > 0) return saved;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function writeEmailChange(redis, key, fields, ttlSeconds) {
+  writeEmailChangeMemory(key, fields, ttlSeconds);
+  if (redis?.status !== "ready") return;
+  try {
+    const saved = readEmailChangeMemory(key) || {
+      ...blankEmailChange(),
+      ...fields,
+    };
+    await redis.hset(key, saved);
+    await redis.expire(key, ttlSeconds);
+  } catch {
+    // Local Redis is optional. The in-memory copy still expires on time.
+  }
+}
+
+async function deleteEmailChange(redis, key) {
+  emailChangeMemory.delete(key);
+  if (redis?.status !== "ready") return;
+  try {
+    await redis.del(key);
+  } catch {
+    // The in-memory copy is already gone.
+  }
+}
+
+function fourDigitCode() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function normalizeEmail(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function emailTakenByOther(email, userId) {
+  const plan = prisma.raw.sql`
+    SELECT id
+    FROM users
+    WHERE lower(email) = ${email} AND id <> ${userId}
+    LIMIT 1
+  `
+    .returnsRow({ id: "pg/text@1" })
+    .build();
+  const rows = await prisma.runtime().query(plan);
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+export const sendCurrentEmailOtp = async (request, reply) => {
+  try {
+    const { id } = request.user;
+    const user = await db.users.where({ id }).first();
+    const currentEmail = normalizeEmail(user?.email);
+
+    if (!user || !currentEmail) {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    const otp = fourDigitCode();
+    const key = emailChangeKey(id);
+    await writeEmailChange(
+      request.server.redis,
+      key,
+      {
+        current_email: currentEmail,
+        current_verified: "false",
+        new_email: "",
+        otp,
+        expiration: String(Date.now() + EMAIL_CHANGE_SECONDS * 1000),
+      },
+      EMAIL_CHANGE_SECONDS,
+    );
+
+    await notify({
+      email: {
+        to: currentEmail,
+        subject: "Confirm your email change — Indian Masala",
+        html: emailChangeOtpTemplate(otp, "current"),
+      },
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Code sent to your current email",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const verifyCurrentEmailOtp = async (request, reply) => {
+  try {
+    const { id } = request.user;
+    const otp = String(request.body?.otp ?? "").trim();
+    if (!/^\d{4}$/.test(otp)) {
+      return reply.status(400).send({
+        success: false,
+        message: "A 4-digit code is required!",
+      });
+    }
+
+    const redis = request.server.redis;
+    const key = emailChangeKey(id);
+    const saved = await readEmailChange(redis, key);
+    if (!saved?.otp || saved.current_verified === "true") {
+      return reply.status(400).send({
+        success: false,
+        message: "Send a code to your current email first",
+      });
+    }
+    if (Date.now() > Number(saved.expiration)) {
+      await deleteEmailChange(redis, key);
+      return reply.status(400).send({
+        success: false,
+        message: "Code expired",
+      });
+    }
+    if (saved.otp !== otp) {
+      return reply.status(400).send({
+        success: false,
+        message: "Invalid verification code",
+      });
+    }
+
+    await writeEmailChange(
+      redis,
+      key,
+      {
+        current_verified: "true",
+        otp: "",
+        expiration: "",
+      },
+      EMAIL_CHANGE_SESSION_SECONDS,
+    );
+
+    return reply.status(200).send({
+      success: true,
+      message: "Current email confirmed",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const sendNewEmailOtp = async (request, reply) => {
+  try {
+    const { id } = request.user;
+    const email = normalizeEmail(request.body?.email);
+    if (!isEmail(email)) {
+      return reply.status(400).send({
+        success: false,
+        message: "A valid email is required!",
+      });
+    }
+
+    const redis = request.server.redis;
+    const key = emailChangeKey(id);
+    const saved = await readEmailChange(redis, key);
+    if (saved?.current_verified !== "true") {
+      return reply.status(400).send({
+        success: false,
+        message: "Confirm your current email first",
+      });
+    }
+    if (email === saved.current_email) {
+      return reply.status(400).send({
+        success: false,
+        message: "Enter a different email",
+      });
+    }
+    if (await emailTakenByOther(email, id)) {
+      return reply.status(409).send({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    const otp = fourDigitCode();
+    await writeEmailChange(
+      redis,
+      key,
+      {
+        new_email: email,
+        otp,
+        expiration: String(Date.now() + EMAIL_CHANGE_SECONDS * 1000),
+      },
+      EMAIL_CHANGE_SESSION_SECONDS,
+    );
+
+    await notify({
+      email: {
+        to: email,
+        subject: "Confirm your new email — Indian Masala",
+        html: emailChangeOtpTemplate(otp, "new"),
+      },
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Code sent to the new email",
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const confirmEmailChange = async (request, reply) => {
+  try {
+    const { id, role } = request.user;
+    const email = normalizeEmail(request.body?.email);
+    const otp = String(request.body?.otp ?? "").trim();
+
+    if (!isEmail(email) || !/^\d{4}$/.test(otp)) {
+      return reply.status(400).send({
+        success: false,
+        message: "Email and a 4-digit code are required!",
+      });
+    }
+
+    const redis = request.server.redis;
+    const key = emailChangeKey(id);
+    const saved = await readEmailChange(redis, key);
+    if (saved?.current_verified !== "true" || saved.new_email !== email) {
+      return reply.status(400).send({
+        success: false,
+        message: "Send a code to the new email first",
+      });
+    }
+    if (!saved.otp || Date.now() > Number(saved.expiration)) {
+      await writeEmailChange(
+        redis,
+        key,
+        { otp: "", expiration: "0" },
+        EMAIL_CHANGE_SESSION_SECONDS,
+      );
+      return reply.status(400).send({
+        success: false,
+        message: "Code expired",
+      });
+    }
+    if (saved.otp !== otp) {
+      return reply.status(400).send({
+        success: false,
+        message: "Invalid verification code",
+      });
+    }
+    if (await emailTakenByOther(email, id)) {
+      return reply.status(409).send({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    const updated = await db.users.where({ id }).update({ email });
+    if (!updated) {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    await deleteEmailChange(redis, key);
+
+    const token = jwt.sign(
+      { id, email, role: role || "admin" },
+      process.env.JWT_SECRET!,
+    );
+
+    return reply.status(200).send({
+      success: true,
+      message: "Email updated",
+      token,
+      data: { email },
     });
   } catch (error) {
     request.log.error(error);
