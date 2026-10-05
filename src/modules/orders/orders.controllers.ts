@@ -30,11 +30,11 @@ function readPickup(body) {
   const pickupTime = String(body?.pickup_time || "").trim();
   const specialRequest = String(body?.special_request || "").trim().slice(0, 500);
 
+  let error = "";
   if (pickupDate && (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) || pickupDate < parisToday())) {
-    return { error: "pickup date is invalid" };
-  }
-  if (pickupTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
-    return { error: "pickup time is invalid" };
+    error = "pickup date is invalid";
+  } else if (pickupTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
+    error = "pickup time is invalid";
   }
 
   return {
@@ -42,7 +42,7 @@ function readPickup(body) {
     pickupDate,
     pickupTime,
     specialRequest,
-    error: "",
+    error,
   };
 }
 
