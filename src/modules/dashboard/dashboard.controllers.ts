@@ -6,6 +6,7 @@ export const getDashboardStats = async (request, reply) => {
     const selected = period || "today";
 
     if (
+      selected !== "all" &&
       selected !== "today" &&
       selected !== "7days" &&
       selected !== "month" &&
@@ -13,9 +14,10 @@ export const getDashboardStats = async (request, reply) => {
     ) {
       return reply.status(400).send({
         success: false,
-        message: "period must be today, 7days, month or year!",
+        message: "period must be all, today, 7days, month or year!",
       });
     }
+    const isAll = selected === "all";
 
     const now = new Date();
     let currentStart = new Date(now);
@@ -63,6 +65,15 @@ export const getDashboardStats = async (request, reply) => {
       previousStart = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1));
       previousEnd = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
       compare_label = "vs last year";
+    }
+
+    // All time: count everything up to now; there is no earlier window to compare with.
+    if (isAll) {
+      currentStart = new Date(0);
+      currentEnd = new Date(now.getTime() + 1);
+      previousStart = new Date(0);
+      previousEnd = new Date(0);
+      compare_label = "";
     }
 
     const currentStartIso = currentStart.toISOString();
@@ -124,15 +135,17 @@ export const getDashboardStats = async (request, reply) => {
     const cateringCurrent = Number(row.catering_current || 0);
     const cateringPrevious = Number(row.catering_previous || 0);
 
-    const ordersChange =
-      ordersPrevious === 0
+    const ordersChange = isAll
+      ? 0
+      : ordersPrevious === 0
         ? ordersCurrent > 0
           ? 100
           : 0
         : Math.round(((ordersCurrent - ordersPrevious) / ordersPrevious) * 100);
 
-    const reservationsChange =
-      reservationsPrevious === 0
+    const reservationsChange = isAll
+      ? 0
+      : reservationsPrevious === 0
         ? reservationsCurrent > 0
           ? 100
           : 0
@@ -142,8 +155,9 @@ export const getDashboardStats = async (request, reply) => {
               100,
           );
 
-    const cateringChange =
-      cateringPrevious === 0
+    const cateringChange = isAll
+      ? 0
+      : cateringPrevious === 0
         ? cateringCurrent > 0
           ? 100
           : 0
