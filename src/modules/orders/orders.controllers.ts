@@ -214,6 +214,7 @@ export const getAllOrders = async (request, reply) => {
     await readySpecialColumns();
     const {
       cursor,
+      page,
       limit,
       search,
       status,
@@ -224,12 +225,14 @@ export const getAllOrders = async (request, reply) => {
       order_number,
     } = request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
+    const pageNumber = Math.max(0, Math.floor(Number(page)) || 0);
+    const offset = pageNumber > 0 ? (pageNumber - 1) * take : 0;
 
     const searchPattern = search ? "%" + search.split(" ").join("%") + "%" : "";
     const digitSearch = search ? String(search).replace(/\D/g, "") : "";
     const digitPattern = digitSearch ? "%" + digitSearch + "%" : "";
     const statusCsv = status || "";
-    const cursorId = cursor || "";
+    const cursorId = pageNumber > 0 ? "" : cursor || "";
     const pinnedId = object_id || "";
     const orderNumberFilter = order_number || "";
     const tokenUser = request.user || {};
@@ -262,6 +265,7 @@ export const getAllOrders = async (request, reply) => {
         o.pickup_time,
         o.special_request,
         o."createdAt",
+        COUNT(*) OVER()::int AS total_count,
         COALESCE(
           (
             SELECT json_agg(
@@ -367,6 +371,7 @@ export const getAllOrders = async (request, reply) => {
         o."createdAt" DESC,
         o.id DESC
       LIMIT ${take + 1}
+      OFFSET ${offset}
     `
       .returnsRow({
         id: "pg/text@1",
@@ -381,6 +386,7 @@ export const getAllOrders = async (request, reply) => {
         pickup_time: { codecId: "pg/text@1", nullable: true },
         special_request: { codecId: "pg/text@1", nullable: true },
         createdAt: "pg/timestamptz-string@1",
+        total_count: "pg/int4@1",
         order: "pg/json@1",
       })
       .build();
@@ -388,12 +394,22 @@ export const getAllOrders = async (request, reply) => {
     const result = await prisma.runtime().query(plan);
     const list = Array.isArray(result) ? result : [];
     const hasMore = list.length > take;
-    const rows = hasMore ? list.slice(0, take) : list;
+    // An empty page has no rows to carry the window count, so total is 0 there.
+    const total = Number(list[0]?.total_count ?? 0);
+    const rows = (hasMore ? list.slice(0, take) : list).map(
+      ({ total_count, ...row }) => row,
+    );
 
     return reply.status(200).send({
       success: true,
       data: rows,
-      pagination: { hasMore },
+      pagination: {
+        hasMore,
+        page: pageNumber || 1,
+        limit: take,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / take)),
+      },
     });
   } catch (error) {
     request.log.error(error);
