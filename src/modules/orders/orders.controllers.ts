@@ -25,31 +25,20 @@ function parisToday() {
   }).format(new Date());
 }
 
-function readSpecialOrder(body) {
-  const isSpecial = body?.is_special === true || body?.is_special === "true";
-  if (!isSpecial) {
-    return {
-      isSpecial: false,
-      pickupDate: "",
-      pickupTime: "",
-      specialRequest: "",
-      error: "",
-    };
-  }
-
+function readPickup(body) {
   const pickupDate = String(body?.pickup_date || "").trim();
   const pickupTime = String(body?.pickup_time || "").trim();
   const specialRequest = String(body?.special_request || "").trim().slice(0, 500);
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) || pickupDate < parisToday()) {
-    return { error: "pickup date is required" };
+  if (pickupDate && (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) || pickupDate < parisToday())) {
+    return { error: "pickup date is invalid" };
   }
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
-    return { error: "pickup time is required" };
+  if (pickupTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
+    return { error: "pickup time is invalid" };
   }
 
   return {
-    isSpecial: true,
+    isSpecial: false,
     pickupDate,
     pickupTime,
     specialRequest,
@@ -61,7 +50,7 @@ export const createOrder = async (request, reply) => {
   try {
     await readySpecialColumns();
     const { name, email, phone, order_item } = request.body || {};
-    const special = readSpecialOrder(request.body);
+    const special = readPickup(request.body);
     if (special.error) {
       return reply.status(400).send({ success: false, message: special.error });
     }
@@ -164,11 +153,10 @@ export const createOrder = async (request, reply) => {
       await db.order_item.create({ order_id: order.id, ...line });
     }
 
-    const specialFlag = special.isSpecial ? "1" : "0";
     await prisma.runtime().query(
       prisma.raw.sql`
         UPDATE "order"
-        SET is_special = (${specialFlag} = '1'),
+        SET is_special = false,
             pickup_date = ${special.pickupDate},
             pickup_time = ${special.pickupTime},
             special_request = ${special.specialRequest}
@@ -178,11 +166,12 @@ export const createOrder = async (request, reply) => {
         .build(),
     );
 
-    const specialNote = special.isSpecial
-      ? ` Special pickup ${special.pickupDate} ${special.pickupTime}${
-          special.specialRequest ? `: ${special.specialRequest}` : ""
-        }.`
-      : "";
+    const specialNote =
+      special.pickupDate || special.pickupTime || special.specialRequest
+        ? ` Pickup ${special.pickupDate} ${special.pickupTime}${
+            special.specialRequest ? `: ${special.specialRequest}` : ""
+          }.`
+        : "";
 
     void notify({
       io: request.server.io,
@@ -233,7 +222,6 @@ export const getAllOrders = async (request, reply) => {
       object_id,
       email,
       order_number,
-      special,
     } = request.query;
     const take = Number(limit) > 50 ? 50 : Number(limit) || 20;
 
@@ -255,7 +243,6 @@ export const getAllOrders = async (request, reply) => {
         message: "phone is required!",
       });
     }
-    const specialOnly = special === "1" || special === "true" ? "1" : "0";
     const useStart = started_date ? 1 : 0;
     const startDate = started_date || "1970-01-01";
     const useEnd = end_date ? 1 : 0;
@@ -360,10 +347,6 @@ export const getAllOrders = async (request, reply) => {
         AND (
           ${pinnedId} = ''
           OR o.id = ${pinnedId}
-        )
-        AND (
-          ${specialOnly} = '0'
-          OR COALESCE(o.is_special, false) = true
         )
         AND (
           ${useStart} = 0

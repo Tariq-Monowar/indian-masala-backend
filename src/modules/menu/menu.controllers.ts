@@ -455,6 +455,76 @@ export const getAllMenu = async (request, reply) => {
       })
       .build();
 
+    let categoryTotals = null;
+    if (!cursorId) {
+      const countPlan = prisma.raw.sql`
+        SELECT
+          COALESCE(m.category_id, '') AS category_id,
+          COALESCE(MAX(m.category_name), '') AS category_name,
+          COUNT(*)::int AS total
+        FROM menu m
+        WHERE
+          (
+            ${searchPattern} = ''
+            OR (
+              COALESCE(m.food_name, '') || ' ' ||
+              COALESCE(m.category_name, '') || ' ' ||
+              COALESCE(m.description_en, '') || ' ' ||
+              COALESCE(m.description_fr, '')
+            ) ILIKE ${searchPattern}
+          )
+          AND (
+            ${spicyCsv} = ''
+            OR lower(m.spicy_level) = ANY(string_to_array(${spicyCsv}, ','))
+          )
+          AND (
+            ${usePrice} = 0
+            OR (
+              COALESCE(m.min_price, m.max_price) <= ${priceTo}
+              AND COALESCE(m.max_price, m.min_price) >= ${priceFrom}
+            )
+          )
+          AND (${usePrepFrom} = 0 OR m.preparation_time >= ${prepFrom})
+          AND (${usePrepTo} = 0 OR m.preparation_time <= ${prepTo})
+          AND (
+            ${useFavorite} = 0
+            OR (${favoriteValue} = 1 AND m.is_favorite = true)
+            OR (${favoriteValue} = 0 AND m.is_favorite = false)
+          )
+          AND (
+            ${useBestseller} = 0
+            OR (${bestsellerValue} = 1 AND m.is_bestseller = true)
+            OR (${bestsellerValue} = 0 AND m.is_bestseller = false)
+          )
+          AND (
+            ${useAvailable} = 0
+            OR (${availableValue} = 1 AND m.is_available = true)
+            OR (${availableValue} = 0 AND m.is_available = false)
+          )
+        GROUP BY m.category_id
+      `
+        .returnsRow({
+          category_id: "pg/text@1",
+          category_name: "pg/text@1",
+          total: "pg/int4@1",
+        })
+        .build();
+      const countResult = await prisma.runtime().query(countPlan);
+      const countList = Array.isArray(countResult) ? countResult : [];
+      let total = 0;
+      const categories = [];
+      for (const row of countList) {
+        const count = Number(row.total) || 0;
+        total += count;
+        categories.push({
+          id: row.category_id || "",
+          name: row.category_name || "",
+          count,
+        });
+      }
+      categoryTotals = { total, categories };
+    }
+
     const result = await prisma.runtime().query(plan);
     const list = Array.isArray(result) ? result : [];
     const hasMore = list.length > take;
@@ -486,7 +556,15 @@ export const getAllMenu = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       data: rows,
-      pagination: { hasMore },
+      pagination: {
+        hasMore,
+        ...(categoryTotals
+          ? {
+              total: categoryTotals.total,
+              categories: categoryTotals.categories,
+            }
+          : {}),
+      },
     });
   } catch (error) {
     request.log.error(error);
