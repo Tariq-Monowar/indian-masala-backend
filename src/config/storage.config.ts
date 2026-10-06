@@ -3,7 +3,7 @@ import fs from "fs";
 import { randomBytes } from "crypto";
 import { pipeline } from "stream/promises";
 import multipart from "@fastify/multipart";
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import { compressUploadToWebp } from "../utils/compress-upload-image";
 import { sanitizeUploadFilename } from "../utils/upload-url";
 
@@ -26,6 +26,10 @@ async function readFilePart(stream: NodeJS.ReadableStream) {
   return Buffer.concat(chunks);
 }
 
+function uploadError(statusCode: number, message: string) {
+  return Object.assign(new Error(message), { statusCode });
+}
+
 function storedFilename(originalName: string, extension: string) {
   const safe = sanitizeUploadFilename(originalName);
   const currentExt = path.extname(safe);
@@ -40,9 +44,29 @@ export function registerMultipart(app: FastifyInstance) {
       files: 10,
     },
     attachFieldsToBody: "keyValues",
-    async onFile(part) {
+    async onFile(this: FastifyRequest, part) {
       if (!part.filename) {
         part.file.resume();
+        return;
+      }
+
+      const imageSize = this.routeOptions.config.uploadImageSize?.(this) ?? null;
+
+      if (imageSize) {
+        if (!isRasterImage(part.mimetype)) {
+          part.file.resume();
+          throw uploadError(415, "Only image files are allowed");
+        }
+
+        let webp: Buffer;
+        try {
+          webp = await compressUploadToWebp(await readFilePart(part.file), imageSize);
+        } catch {
+          throw uploadError(400, "Invalid or corrupted image file");
+        }
+        const filename = storedFilename(part.filename, ".webp");
+        await fs.promises.writeFile(path.join(uploads, filename), webp);
+        Object.assign(part, { value: filename });
         return;
       }
 

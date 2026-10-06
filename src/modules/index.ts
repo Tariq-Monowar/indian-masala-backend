@@ -8,6 +8,7 @@ import company_info from "./company_info/company_info.routes";
 import orders from "./orders/orders.routes";
 import dashboard from "./dashboard/dashboard.routes";
 import notifications from "./notifications/notifications.routes";
+import site_content from "./site_content/site_content.routes";
 
 export default async function routes(fastify: FastifyInstance) {
   fastify.register(users, { prefix: "/users" });
@@ -19,4 +20,5 @@ export default async function routes(fastify: FastifyInstance) {
   fastify.register(orders, { prefix: "/orders" });
   fastify.register(dashboard, { prefix: "/dashboard" });
   fastify.register(notifications, { prefix: "/notifications" });
+  fastify.register(site_content, { prefix: "/content" });
 }
